@@ -341,7 +341,12 @@ Maintain consistent visual semantics across tables, badges, and charts:
 
 When working on this repository, strictly adhere to these practices:
 
-1. **Full-Stack Schema Synchronization**:
+1. **Git & Branching Workflow (Strict)**:
+   - **Never make changes directly to the `main` branch.**
+   - **Create a feature / bugfix branch for each feature or bugfix** (e.g., `feature/<name>` or `bugfix/<name>`).
+   - **Always make a commit for each change** with a clear, conventional commit message.
+
+2. **Full-Stack Schema Synchronization**:
    Whenever a database model column is added or modified:
    - Update SQLAlchemy model in `backend/app/models.py`.
    - Update Pydantic schemas in `backend/app/schemas.py` (`Base`, `Create`, `Update`, `Response`).
@@ -349,23 +354,23 @@ When working on this repository, strictly adhere to these practices:
    - Update frontend form modals (`Modals/`) and data tables (`DataTable/`).
    - Update backup import/export serializers in `backend/app/routers/data_io.py`.
 
-2. **Pydantic v2 Best Practices**:
+3. **Pydantic v2 Best Practices**:
    - Use `model.model_dump()` instead of deprecated `model.dict()`.
    - Use `model.model_dump(exclude_unset=True)` for partial updates.
    - Use `model_config = ConfigDict(from_attributes=True)` or `class Config: from_attributes = True` for ORM serialization.
 
-3. **Standing Charge Integrity**:
+4. **Standing Charge Integrity**:
    - Never collapse daily standing charges into consumption unit rates.
    - Always allow users to log or adjust standing charges independently.
    - Always compute daily averages by dividing by actual days in the period/month (`calendar.monthrange`).
 
-4. **Multi-Property Scoping**:
+5. **Multi-Property Scoping**:
    - Every bill, reading, and tariff query **must** filter by `property_id`.
    - Never leak records across properties in analytics or table views.
 
-5. **Type Safety Verification**:
+6. **Type Safety Verification**:
    - After modifying TypeScript files, run `./frontend/node_modules/.bin/tsc -p frontend/tsconfig.json --noEmit` and resolve any compiler diagnostics.
 
-6. **Dark Mode & Styling**:
+7. **Dark Mode & Styling**:
    - Ensure all new components support dark mode using Tailwind `dark:` variant classes (e.g. `bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100`).
    - Retain clean typography, rounded corners (`rounded-xl` or `rounded-lg`), and subtle borders (`border-slate-200 dark:border-slate-800`).
