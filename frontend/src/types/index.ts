@@ -46,6 +46,7 @@ export interface RecurringContractBillCreate {
   start_date: string;
   end_date?: string;
   duration_months?: number;
+  payment_count?: number;
   monthly_amount: number;
   standing_charge_cost?: number;
   unit_rate_cost?: number;
@@ -53,6 +54,7 @@ export interface RecurringContractBillCreate {
   notes?: string;
   create_tariff_plan?: boolean;
   skip_existing?: boolean;
+  include_zero_payment_bills?: boolean;
 }
 
 export interface RecurringContractBillResponse {

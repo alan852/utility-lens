@@ -183,12 +183,19 @@ def create_recurring_contract_bills(
     elif not duration:
         duration = 12
 
+    payment_count = contract_in.payment_count if contract_in.payment_count is not None else duration
+    payment_count = min(payment_count, duration)
+
     created_bills: List[models.BillRecord] = []
     skipped_count = 0
     created_count = 0
     final_period_end = start_date
 
     for i in range(duration):
+        is_payment_month = (i < payment_count)
+        if not is_payment_month and not contract_in.include_zero_payment_bills:
+            continue
+
         m_start = start_date + relativedelta(months=i)
         if start_date.day == 1:
             last_day = calendar.monthrange(m_start.year, m_start.month)[1]
@@ -212,46 +219,57 @@ def create_recurring_contract_bills(
             skipped_count += 1
             continue
 
-        # Determine cost breakout
-        if contract_in.standing_charge_cost is not None and contract_in.unit_rate_cost is not None:
-            sc_cost = contract_in.standing_charge_cost
-            ur_cost = contract_in.unit_rate_cost
-        elif util in ["COUNCIL_TAX", "BROADBAND", "ESTATE_SERVICE_CHARGE"]:
-            sc_cost = contract_in.monthly_amount
-            ur_cost = 0.0
-        else:
-            if contract_in.standing_charge_cost is not None:
-                sc_cost = contract_in.standing_charge_cost
-                ur_cost = round(max(0.0, contract_in.monthly_amount - sc_cost), 2)
-            elif contract_in.unit_rate_cost is not None:
-                ur_cost = contract_in.unit_rate_cost
-                sc_cost = round(max(0.0, contract_in.monthly_amount - ur_cost), 2)
-            else:
-                tariff = get_active_tariff(db, contract_in.property_id, util, m_start)
-                days = max(1, (m_end - m_start).days + 1)
-                if tariff and tariff.standing_charge > 0:
-                    vat_mult = 1.0 + (tariff.vat_rate or 0.0)
-                    sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
-                    if contract_in.monthly_amount >= sc_cost:
-                        ur_cost = round(contract_in.monthly_amount - sc_cost, 2)
-                    else:
-                        sc_cost = contract_in.monthly_amount
-                        ur_cost = 0.0
-                else:
-                    sc_cost = contract_in.monthly_amount
-                    ur_cost = 0.0
-
         contract_title = contract_in.contract_name or f"{util.replace('_', ' ').title()} Contract"
-        month_label = f"Month {i+1} of {duration}"
+        if is_payment_month:
+            this_month_amount = contract_in.monthly_amount
+            # Determine cost breakout
+            if contract_in.standing_charge_cost is not None and contract_in.unit_rate_cost is not None:
+                sc_cost = contract_in.standing_charge_cost
+                ur_cost = contract_in.unit_rate_cost
+            elif util in ["COUNCIL_TAX", "BROADBAND", "ESTATE_SERVICE_CHARGE"]:
+                sc_cost = this_month_amount
+                ur_cost = 0.0
+            else:
+                if contract_in.standing_charge_cost is not None:
+                    sc_cost = contract_in.standing_charge_cost
+                    ur_cost = round(max(0.0, this_month_amount - sc_cost), 2)
+                elif contract_in.unit_rate_cost is not None:
+                    ur_cost = contract_in.unit_rate_cost
+                    sc_cost = round(max(0.0, this_month_amount - ur_cost), 2)
+                else:
+                    tariff = get_active_tariff(db, contract_in.property_id, util, m_start)
+                    days = max(1, (m_end - m_start).days + 1)
+                    if tariff and tariff.standing_charge > 0:
+                        vat_mult = 1.0 + (tariff.vat_rate or 0.0)
+                        sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
+                        if this_month_amount >= sc_cost:
+                            ur_cost = round(this_month_amount - sc_cost, 2)
+                        else:
+                            sc_cost = this_month_amount
+                            ur_cost = 0.0
+                    else:
+                        sc_cost = this_month_amount
+                        ur_cost = 0.0
+
+            if payment_count != duration:
+                month_label = f"Payment {i+1} of {payment_count} (Month {i+1} of {duration})"
+            else:
+                month_label = f"Month {i+1} of {duration}"
+        else:
+            this_month_amount = 0.0
+            sc_cost = 0.0
+            ur_cost = 0.0
+            month_label = f"Month {i+1} of {duration} (No payment scheduled)"
+
         bill_notes = f"{contract_title} ({month_label})"
         if contract_in.notes:
             bill_notes += f" - {contract_in.notes}"
 
         if existing_bill:
-            existing_bill.total_cost = contract_in.monthly_amount
+            existing_bill.total_cost = this_month_amount
             existing_bill.standing_charge_cost = sc_cost
             existing_bill.unit_rate_cost = ur_cost
-            existing_bill.total_units = contract_in.total_units
+            existing_bill.total_units = contract_in.total_units if is_payment_month else 0.0
             existing_bill.source = "RECURRING_CONTRACT"
             existing_bill.notes = bill_notes
             created_bills.append(existing_bill)
@@ -262,8 +280,8 @@ def create_recurring_contract_bills(
                 utility_type=util,
                 period_start=m_start,
                 period_end=m_end,
-                total_units=contract_in.total_units,
-                total_cost=contract_in.monthly_amount,
+                total_units=contract_in.total_units if is_payment_month else 0.0,
+                total_cost=this_month_amount,
                 standing_charge_cost=sc_cost,
                 unit_rate_cost=ur_cost,
                 notes=bill_notes,
@@ -281,7 +299,9 @@ def create_recurring_contract_bills(
         elif util in ["ELECTRICITY", "GAS"]:
             vat = 0.05
 
-        standing_daily = round(contract_in.monthly_amount / 30.4167, 2) if util in ["COUNCIL_TAX", "BROADBAND", "ESTATE_SERVICE_CHARGE"] else (round((contract_in.standing_charge_cost or 0.0) / 30.4167, 2))
+        total_contract_cost = payment_count * contract_in.monthly_amount
+        avg_monthly_cost = total_contract_cost / duration
+        standing_daily = round(avg_monthly_cost / 30.4167, 2) if util in ["COUNCIL_TAX", "BROADBAND", "ESTATE_SERVICE_CHARGE"] else (round((contract_in.standing_charge_cost or 0.0) / 30.4167, 2))
 
         tariff_name = contract_in.contract_name or f"{util.replace('_', ' ').title()} Fixed Contract"
         tariff_plan = models.TariffPlan(

@@ -68,8 +68,11 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
     d.setDate(1);
     return d.toISOString().split('T')[0];
   });
-  const [durationPreset, setDurationPreset] = useState<10 | 12 | 18 | 24 | 'custom'>(12);
+  const [durationPreset, setDurationPreset] = useState<12 | 18 | 24 | 'custom'>(12);
   const [customDuration, setCustomDuration] = useState<string>('12');
+  const [paymentCountPreset, setPaymentCountPreset] = useState<'equal' | '10' | 'custom'>('equal');
+  const [customPaymentCount, setCustomPaymentCount] = useState<string>('10');
+  const [includeZeroPaymentBills, setIncludeZeroPaymentBills] = useState<boolean>(true);
   const [monthlyAmount, setMonthlyAmount] = useState<string>('');
   const [createTariffPlan, setCreateTariffPlan] = useState<boolean>(true);
   const [skipExisting, setSkipExisting] = useState<boolean>(true);
@@ -129,6 +132,12 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
     ? (parseInt(customDuration, 10) || 12) 
     : durationPreset;
 
+  const activePaymentCount = paymentCountPreset === 'equal'
+    ? activeDurationMonths
+    : paymentCountPreset === '10'
+    ? Math.min(10, activeDurationMonths)
+    : Math.min(activeDurationMonths, Math.max(1, parseInt(customPaymentCount, 10) || 1));
+
   const handleUtilitySelect = (type: UtilityType) => {
     setUtilityType(type);
     const metered = type === 'ELECTRICITY' || type === 'GAS' || type === 'WATER';
@@ -141,11 +150,15 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
       setTotalCost(u > 0 || s > 0 ? (u + s).toFixed(2) : '');
     }
 
-    // Smart duration default based on utility type
-    if (type === 'COUNCIL_TAX' && durationPreset !== 'custom') {
-      setDurationPreset(10);
-    } else if (type === 'BROADBAND' && durationPreset === 10) {
-      setDurationPreset(18);
+    // Smart duration & payment schedule default based on utility type
+    if (type === 'COUNCIL_TAX') {
+      if (durationPreset !== 'custom') setDurationPreset(12);
+      setPaymentCountPreset('10');
+    } else {
+      if (paymentCountPreset === '10') setPaymentCountPreset('equal');
+      if (type === 'BROADBAND' && durationPreset !== 'custom') {
+        setDurationPreset(18);
+      }
     }
   };
 
@@ -189,9 +202,22 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
   const getSchedulePreview = () => {
     if (!contractStartDate || activeDurationMonths <= 0) return [];
     const [y, m, d] = contractStartDate.split('-').map(Number);
-    const schedule: { monthIndex: number; label: string; start: string; end: string }[] = [];
+    const schedule: {
+      monthIndex: number;
+      label: string;
+      start: string;
+      end: string;
+      isPaymentMonth: boolean;
+      paymentNumber?: number;
+      amount: number;
+    }[] = [];
 
     for (let i = 0; i < activeDurationMonths; i++) {
+      const isPaymentMonth = i < activePaymentCount;
+      if (!isPaymentMonth && !includeZeroPaymentBills) {
+        continue;
+      }
+
       const targetMonth = (m - 1) + i;
       const curYear = y + Math.floor(targetMonth / 12);
       const curMonth = ((targetMonth % 12) + 12) % 12;
@@ -218,15 +244,37 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
         label: monthLabel,
         start: pStartStr,
         end: pEndStr,
+        isPaymentMonth,
+        paymentNumber: isPaymentMonth ? i + 1 : undefined,
+        amount: isPaymentMonth ? (parseFloat(monthlyAmount) || 0) : 0.0,
       });
     }
     return schedule;
   };
 
+  const getFullContractEndDate = () => {
+    if (!contractStartDate || activeDurationMonths <= 0) return '';
+    const [y, m, d] = contractStartDate.split('-').map(Number);
+    const lastTargetMonth = (m - 1) + activeDurationMonths - 1;
+    const curYear = y + Math.floor(lastTargetMonth / 12);
+    const curMonth = ((lastTargetMonth % 12) + 12) % 12;
+    if (d === 1) {
+      const lastDay = new Date(curYear, curMonth + 1, 0).getDate();
+      return formatLocalDate(curYear, curMonth, lastDay);
+    } else {
+      const nextMonthDate = new Date(curYear, curMonth + 1, d);
+      nextMonthDate.setDate(nextMonthDate.getDate() - 1);
+      return formatLocalDate(nextMonthDate.getFullYear(), nextMonthDate.getMonth(), nextMonthDate.getDate());
+    }
+  };
+
   const schedulePreview = getSchedulePreview();
-  const contractEndDate = schedulePreview.length > 0 ? schedulePreview[schedulePreview.length - 1].end : '';
+  const contractEndDate = getFullContractEndDate();
   const parsedMonthlyAmt = parseFloat(monthlyAmount) || 0;
-  const totalContractCost = (parsedMonthlyAmt * activeDurationMonths).toFixed(2);
+  const totalContractCost = (parsedMonthlyAmt * activePaymentCount).toFixed(2);
+  const avgMonthlyCost = activeDurationMonths > 0 
+    ? ((parsedMonthlyAmt * activePaymentCount) / activeDurationMonths).toFixed(2)
+    : '0.00';
 
   const handleSingleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -323,10 +371,12 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
         contract_name: contractName.trim() || undefined,
         start_date: contractStartDate,
         duration_months: activeDurationMonths,
+        payment_count: activePaymentCount,
         monthly_amount: parsedMonthlyAmt,
         notes: notes.trim() || undefined,
         create_tariff_plan: createTariffPlan,
         skip_existing: skipExisting,
+        include_zero_payment_bills: includeZeroPaymentBills,
       });
 
       localStorage.setItem('last_bill_property_id', selectedPropertyId);
@@ -590,7 +640,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Contract Duration
                 </label>
-                <div className="grid grid-cols-5 gap-1.5 text-xs">
+                <div className="grid grid-cols-4 gap-1.5 text-xs">
                   <button
                     type="button"
                     onClick={() => setDurationPreset(12)}
@@ -626,18 +676,6 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setDurationPreset(10)}
-                    title="Standard UK Council Tax 10-month installment scheme"
-                    className={`py-1.5 px-2 rounded-lg font-medium border text-center transition ${
-                      durationPreset === 10
-                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    10m (Tax)
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setDurationPreset('custom')}
                     className={`py-1.5 px-2 rounded-lg font-medium border text-center transition ${
                       durationPreset === 'custom'
@@ -650,7 +688,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                 </div>
                 {durationPreset === 'custom' && (
                   <div className="mt-2 flex items-center space-x-2">
-                    <span className="text-xs text-slate-500">Number of monthly statements:</span>
+                    <span className="text-xs text-slate-500">Contract coverage period:</span>
                     <input
                       type="number"
                       min="1"
@@ -664,10 +702,76 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                 )}
               </div>
 
+              {/* Payment Schedule (Number of Payments) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Payment Schedule (Number of Payments)
+                  </label>
+                  {activePaymentCount < activeDurationMonths && (
+                    <span className="text-[11px] font-medium text-purple-600 dark:text-purple-400">
+                      {activePaymentCount} payments over {activeDurationMonths} months
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-1.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentCountPreset('equal')}
+                    className={`py-1.5 px-2 rounded-lg font-medium border text-center transition ${
+                      paymentCountPreset === 'equal'
+                        ? 'border-sky-500 bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-bold'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    All {activeDurationMonths} Months
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentCountPreset('10')}
+                    title="10 monthly payments (e.g. UK Council Tax 10-month instalment scheme)"
+                    className={`py-1.5 px-2 rounded-lg font-medium border text-center transition ${
+                      paymentCountPreset === '10'
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    10 Payments (Tax)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentCountPreset('custom')}
+                    className={`py-1.5 px-2 rounded-lg font-medium border text-center transition ${
+                      paymentCountPreset === 'custom'
+                        ? 'border-sky-500 bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 font-bold'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    Custom
+                  </button>
+                </div>
+                {paymentCountPreset === 'custom' && (
+                  <div className="mt-2 flex items-center space-x-2">
+                    <span className="text-xs text-slate-500">Number of payments:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={activeDurationMonths}
+                      value={customPaymentCount}
+                      onChange={(e) => setCustomPaymentCount(e.target.value)}
+                      className="w-20 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-1.5 text-center font-bold"
+                    />
+                    <span className="text-xs text-slate-500">
+                      payments (max {activeDurationMonths})
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {/* Monthly Amount Input */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Repeating Monthly Bill Amount ({curr}) *
+                  Payment Amount (per instalment) ({curr}) *
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">{curr}</span>
@@ -676,12 +780,12 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                     step="0.01"
                     min="0.01"
                     required
-                    placeholder="e.g. 35.99"
+                    placeholder="e.g. 184.00"
                     value={monthlyAmount}
                     onChange={(e) => setMonthlyAmount(e.target.value)}
                     className="w-full text-sm font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 pl-8 text-slate-900 dark:text-white focus:ring-1 focus:ring-sky-500"
                   />
-                  <span className="absolute right-3 top-2.5 text-xs font-medium text-slate-400">/ month</span>
+                  <span className="absolute right-3 top-2.5 text-xs font-medium text-slate-400">/ payment</span>
                 </div>
               </div>
 
@@ -691,7 +795,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                   <div className="flex items-center space-x-1.5 text-sky-800 dark:text-sky-300 font-semibold">
                     <Calendar className="w-4 h-4 text-sky-500" />
                     <span>
-                      {activeDurationMonths} monthly statements • Total: {curr}{totalContractCost}
+                      {activePaymentCount} payments • Total: {curr}{totalContractCost}
                     </span>
                   </div>
                   <button
@@ -704,25 +808,45 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                   </button>
                 </div>
 
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {schedulePreview.length > 0
-                    ? `From ${schedulePreview[0].label} (${schedulePreview[0].start}) through ${schedulePreview[schedulePreview.length - 1].label} (${schedulePreview[schedulePreview.length - 1].end})`
-                    : ''}
-                </p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-[11px] text-slate-500 dark:text-slate-400 gap-1">
+                  <span>
+                    Contract covers {activeDurationMonths} months ({schedulePreview[0]?.start} → {contractEndDate})
+                  </span>
+                  {activePaymentCount < activeDurationMonths && (
+                    <span className="font-semibold text-sky-700 dark:text-sky-300">
+                      Avg: {curr}{avgMonthlyCost}/mo
+                    </span>
+                  )}
+                </div>
 
                 {/* Collapsible Month Schedule */}
                 {showSchedulePreview && (
-                  <div className="mt-2 pt-2 border-t border-sky-200/60 dark:border-sky-800/60 max-h-36 overflow-y-auto space-y-1 pr-1">
+                  <div className="mt-2 pt-2 border-t border-sky-200/60 dark:border-sky-800/60 max-h-48 overflow-y-auto space-y-1 pr-1">
                     {schedulePreview.map((item) => (
                       <div
                         key={item.monthIndex}
-                        className="flex items-center justify-between py-1 px-2 rounded bg-white/70 dark:bg-slate-900/60 text-[11px]"
+                        className={`flex items-center justify-between py-1.5 px-2 rounded text-[11px] ${
+                          item.isPaymentMonth
+                            ? 'bg-white/70 dark:bg-slate-900/60'
+                            : 'bg-slate-100/60 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500'
+                        }`}
                       >
-                        <span className="font-medium text-slate-800 dark:text-slate-200">
-                          {item.monthIndex}. {item.label} ({item.start} → {item.end})
-                        </span>
-                        <span className="font-semibold text-slate-900 dark:text-white">
-                          {curr}{parsedMonthlyAmt > 0 ? parsedMonthlyAmt.toFixed(2) : '0.00'}
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium text-slate-800 dark:text-slate-200">
+                            {item.monthIndex}. {item.label} ({item.start} → {item.end})
+                          </span>
+                          {item.isPaymentMonth ? (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300">
+                              Payment {item.paymentNumber}/{activePaymentCount}
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-200 dark:bg-slate-800 text-slate-500">
+                              No payment
+                            </span>
+                          )}
+                        </div>
+                        <span className={`font-semibold ${item.isPaymentMonth ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
+                          {curr}{item.amount.toFixed(2)}
                         </span>
                       </div>
                     ))}
@@ -732,6 +856,20 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
 
               {/* Options */}
               <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300 pt-1">
+                {activePaymentCount < activeDurationMonths && (
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeZeroPaymentBills}
+                      onChange={(e) => setIncludeZeroPaymentBills(e.target.checked)}
+                      className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-4 w-4"
+                    />
+                    <span>
+                      Record {curr}0 statements for non-payment months (Months {activePaymentCount + 1}–{activeDurationMonths})
+                    </span>
+                  </label>
+                )}
+
                 <label className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"

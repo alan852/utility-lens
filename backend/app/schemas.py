@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # Property Schemas
 class PropertyBase(BaseModel):
@@ -99,6 +99,7 @@ class RecurringContractBillCreate(BaseModel):
     start_date: date
     end_date: Optional[date] = None
     duration_months: Optional[int] = Field(12, ge=1, le=120)
+    payment_count: Optional[int] = Field(None, ge=1, le=120)
     monthly_amount: float = Field(..., gt=0, example=35.99)
     standing_charge_cost: Optional[float] = None
     unit_rate_cost: Optional[float] = None
@@ -106,6 +107,16 @@ class RecurringContractBillCreate(BaseModel):
     notes: Optional[str] = None
     create_tariff_plan: bool = True
     skip_existing: bool = True
+    include_zero_payment_bills: bool = True
+
+    @model_validator(mode="after")
+    def validate_payment_count(self):
+        duration = self.duration_months or 12
+        if self.payment_count is None:
+            self.payment_count = duration
+        elif self.payment_count > duration:
+            raise ValueError(f"Number of payments ({self.payment_count}) cannot exceed contract duration ({duration} months)")
+        return self
 
 class RecurringContractBillResponse(BaseModel):
     success: bool
