@@ -3,9 +3,10 @@ import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { TariffSimulationResponse, TariffSimulationScenario } from '../../types';
 import { Calculator, TrendingDown, TrendingUp, AlertCircle, RefreshCw, Zap, Flame } from 'lucide-react';
+import { PropertyScopeSelector } from '../PropertyScopeSelector';
 
 export const TariffSimulator: React.FC = () => {
-  const { currentProperty } = useApp();
+  const { currentProperty, selectedPropertyIds } = useApp();
   const [elecUnitRate, setElecUnitRate] = useState<number>(0.245);
   const [elecStandingCharge, setElecStandingCharge] = useState<number>(0.55);
   const [gasUnitRate, setGasUnitRate] = useState<number>(0.065);
@@ -16,7 +17,8 @@ export const TariffSimulator: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const runSimulation = async () => {
-    if (!currentProperty) return;
+    const propParam = selectedPropertyIds.length > 0 ? selectedPropertyIds : (currentProperty ? [currentProperty.id] : []);
+    if (propParam.length === 0) return;
     setLoading(true);
     setError(null);
     try {
@@ -34,7 +36,7 @@ export const TariffSimulator: React.FC = () => {
           vat_rate: 0.05,
         },
       ];
-      const res = await api.simulateTariffs(currentProperty.id, scenarios, lookbackMonths);
+      const res = await api.simulateTariffs(propParam, scenarios, lookbackMonths);
       setSimulation(res);
     } catch (err: any) {
       setError(err.message || 'Simulation failed');
@@ -45,13 +47,15 @@ export const TariffSimulator: React.FC = () => {
 
   useEffect(() => {
     runSimulation();
-  }, [currentProperty, lookbackMonths]);
+  }, [selectedPropertyIds, currentProperty, lookbackMonths]);
 
   const curr = simulation?.currency_symbol || currentProperty?.currency_symbol || '£';
   const hasSavings = simulation && simulation.total_savings > 0;
 
   return (
     <div className="space-y-6">
+      <PropertyScopeSelector />
+
       {/* Header */}
       <div className="bg-white dark:bg-slate-800/80 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

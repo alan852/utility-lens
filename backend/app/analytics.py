@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from datetime import date, datetime, timedelta
 import calendar
 import pandas as pd
@@ -6,11 +6,39 @@ import numpy as np
 from sqlalchemy.orm import Session
 from . import models, schemas, crud
 
-def compute_kpis(db: Session, property_id: str) -> schemas.KPISummaryResponse:
-    prop = crud.get_property(db, property_id)
-    currency = prop.currency_symbol if prop else "£"
+def resolve_property_ids(db: Session, property_id_or_ids: Optional[Union[str, List[str]]]) -> List[str]:
+    if not property_id_or_ids:
+        return [p.id for p in crud.get_properties(db)]
+    ids = []
+    if isinstance(property_id_or_ids, list):
+        for item in property_id_or_ids:
+            if "," in item:
+                ids.extend([x.strip() for x in item.split(",") if x.strip()])
+            elif item.strip():
+                ids.append(item.strip())
+    else:
+        if "," in property_id_or_ids:
+            ids = [x.strip() for x in property_id_or_ids.split(",") if x.strip()]
+        else:
+            ids = [property_id_or_ids.strip()]
+    if any(i.upper() == "ALL" for i in ids):
+        return [p.id for p in crud.get_properties(db)]
+    return list(dict.fromkeys(ids))
 
-    bills = crud.get_bills(db, property_id)
+def get_currency_symbol(db: Session, property_ids: List[str]) -> str:
+    if not property_ids:
+        return "£"
+    props = db.query(models.Property).filter(models.Property.id.in_(property_ids)).all()
+    symbols = {p.currency_symbol for p in props if p.currency_symbol}
+    if len(symbols) == 1:
+        return list(symbols)[0]
+    return "£"
+
+def compute_kpis(db: Session, property_id: Union[str, List[str]]) -> schemas.KPISummaryResponse:
+    property_ids = resolve_property_ids(db, property_id)
+    currency = get_currency_symbol(db, property_ids)
+
+    bills = crud.get_bills_for_properties(db, property_ids)
     if not bills:
         return schemas.KPISummaryResponse(
             total_spend_trailing_12m=0.0,
@@ -106,11 +134,11 @@ def compute_kpis(db: Session, property_id: str) -> schemas.KPISummaryResponse:
         currency_symbol=currency
     )
 
-def compute_monthly_breakdown(db: Session, property_id: str, months_lookback: int = 24) -> schemas.MonthlyBreakdownResponse:
-    prop = crud.get_property(db, property_id)
-    currency = prop.currency_symbol if prop else "£"
+def compute_monthly_breakdown(db: Session, property_id: Union[str, List[str]], months_lookback: int = 24) -> schemas.MonthlyBreakdownResponse:
+    property_ids = resolve_property_ids(db, property_id)
+    currency = get_currency_symbol(db, property_ids)
 
-    bills = crud.get_bills(db, property_id)
+    bills = crud.get_bills_for_properties(db, property_ids)
     if not bills:
         return schemas.MonthlyBreakdownResponse(data=[], currency_symbol=currency)
 
@@ -177,11 +205,12 @@ def compute_monthly_breakdown(db: Session, property_id: str, months_lookback: in
 
 def compute_yoy_comparison(
     db: Session, 
-    property_id: str, 
+    property_id: Union[str, List[str]], 
     year_current: Optional[int] = None, 
     year_previous: Optional[int] = None
 ) -> schemas.YoYComparisonResponse:
-    bills = crud.get_bills(db, property_id)
+    property_ids = resolve_property_ids(db, property_id)
+    bills = crud.get_bills_for_properties(db, property_ids)
     if not bills:
         cur_year = datetime.now().year
         return schemas.YoYComparisonResponse(
@@ -262,11 +291,11 @@ def compute_yoy_comparison(
         data=items
     )
 
-def compute_baseload_analysis(db: Session, property_id: str) -> schemas.BaseloadAnalysisResponse:
-    prop = crud.get_property(db, property_id)
-    currency = prop.currency_symbol if prop else "£"
+def compute_baseload_analysis(db: Session, property_id: Union[str, List[str]]) -> schemas.BaseloadAnalysisResponse:
+    property_ids = resolve_property_ids(db, property_id)
+    currency = get_currency_symbol(db, property_ids)
 
-    bills = crud.get_bills(db, property_id)
+    bills = crud.get_bills_for_properties(db, property_ids)
     if not bills:
         return schemas.BaseloadAnalysisResponse(currency_symbol=currency, items=[], insights=["No bill records found to analyze baseload."])
 
@@ -337,13 +366,15 @@ def compute_baseload_analysis(db: Session, property_id: str) -> schemas.Baseload
     return schemas.BaseloadAnalysisResponse(currency_symbol=currency, items=items, insights=insights)
 
 def simulate_tariffs(db: Session, request: schemas.TariffSimulationRequest) -> schemas.TariffSimulationResponse:
-    prop = crud.get_property(db, request.property_id)
-    currency = prop.currency_symbol if prop else "£"
+    req_ids = request.property_ids or request.property_id
+    property_ids = resolve_property_ids(db, req_ids)
+    currency = get_currency_symbol(db, property_ids)
 
-    bills = crud.get_bills(db, request.property_id)
+    bills = crud.get_bills_for_properties(db, property_ids)
+    first_prop_id = property_ids[0] if len(property_ids) == 1 else (request.property_id or "ALL")
     if not bills:
         return schemas.TariffSimulationResponse(
-            property_id=request.property_id,
+            property_id=first_prop_id,
             months_analyzed=0,
             total_historical_cost=0.0,
             total_simulated_cost=0.0,
@@ -379,7 +410,7 @@ def simulate_tariffs(db: Session, request: schemas.TariffSimulationRequest) -> s
 
     if df.empty:
         return schemas.TariffSimulationResponse(
-            property_id=request.property_id,
+            property_id=first_prop_id,
             months_analyzed=request.months_lookback,
             total_historical_cost=0.0,
             total_simulated_cost=0.0,
@@ -424,7 +455,7 @@ def simulate_tariffs(db: Session, request: schemas.TariffSimulationRequest) -> s
     tot_savings_pct = round((total_diff / total_historical) * 100, 1) if total_historical > 0 else 0.0
 
     return schemas.TariffSimulationResponse(
-        property_id=request.property_id,
+        property_id=first_prop_id,
         months_analyzed=request.months_lookback,
         total_historical_cost=round(total_historical, 2),
         total_simulated_cost=round(total_simulated, 2),

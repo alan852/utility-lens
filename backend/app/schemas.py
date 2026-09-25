@@ -192,7 +192,8 @@ class TariffSimulationScenario(BaseModel):
     vat_rate: float = 0.05
 
 class TariffSimulationRequest(BaseModel):
-    property_id: str
+    property_id: Optional[str] = None
+    property_ids: Optional[List[str]] = None
     months_lookback: int = 12
     scenarios: List[TariffSimulationScenario]
 
@@ -207,7 +208,8 @@ class TariffSimulationItemResult(BaseModel):
     standing_charge_cost: float
 
 class TariffSimulationResponse(BaseModel):
-    property_id: str
+    property_id: Optional[str] = None
+    property_ids: Optional[List[str]] = None
     months_analyzed: int
     total_historical_cost: float
     total_simulated_cost: float

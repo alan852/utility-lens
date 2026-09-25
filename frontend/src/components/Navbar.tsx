@@ -39,6 +39,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     properties, 
     currentProperty, 
     setCurrentProperty, 
+    selectedPropertyIds,
+    setSelectedPropertyIds,
+    selectAllProperties,
+    isAllPropertiesSelected,
     triggerRefresh, 
     isDarkMode, 
     toggleDarkMode,
@@ -87,12 +91,25 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Building className="w-4 h-4 ml-2 text-slate-500 dark:text-slate-400" />
               <select
                 className="bg-transparent text-sm font-medium text-slate-800 dark:text-slate-200 py-1 px-2 focus:outline-none cursor-pointer"
-                value={currentProperty?.id || ''}
+                value={isAllPropertiesSelected ? 'ALL' : (selectedPropertyIds.length === 1 ? selectedPropertyIds[0] : (currentProperty?.id || ''))}
                 onChange={(e) => {
-                  const selected = properties.find(p => p.id === e.target.value);
-                  if (selected) setCurrentProperty(selected);
+                  const val = e.target.value;
+                  if (val === 'ALL') {
+                    selectAllProperties();
+                  } else {
+                    const selected = properties.find(p => p.id === val);
+                    if (selected) {
+                      setCurrentProperty(selected);
+                      setSelectedPropertyIds([selected.id]);
+                    }
+                  }
                 }}
               >
+                {properties.length > 1 && (
+                  <option value="ALL" className="dark:bg-slate-800 font-semibold text-sky-600 dark:text-sky-400">
+                    All Properties ({properties.length} Combined)
+                  </option>
+                )}
                 {properties.map(p => (
                   <option key={p.id} value={p.id} className="dark:bg-slate-800">
                     {p.name}
@@ -101,7 +118,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </select>
               <button
                 onClick={onOpenPropertyModal}
-                title="Manage Properties"
+                title="Manage & Edit Properties"
                 className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
               >
                 <Plus className="w-4 h-4" />

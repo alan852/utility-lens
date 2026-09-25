@@ -87,6 +87,24 @@ def delete_tariff(db: Session, tariff_id: str) -> bool:
     return True
 
 # Bills
+def get_bills_for_properties(
+    db: Session,
+    property_ids: List[str],
+    utility_type: Optional[str] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None
+) -> List[models.BillRecord]:
+    if not property_ids:
+        return []
+    q = db.query(models.BillRecord).filter(models.BillRecord.property_id.in_(property_ids))
+    if utility_type:
+        q = q.filter(models.BillRecord.utility_type == utility_type.upper())
+    if start_date:
+        q = q.filter(models.BillRecord.period_start >= start_date)
+    if end_date:
+        q = q.filter(models.BillRecord.period_end <= end_date)
+    return q.order_by(desc(models.BillRecord.period_start)).all()
+
 def get_bills(
     db: Session, 
     property_id: str, 
@@ -94,6 +112,9 @@ def get_bills(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None
 ) -> List[models.BillRecord]:
+    if "," in property_id:
+        ids = [p.strip() for p in property_id.split(",") if p.strip()]
+        return get_bills_for_properties(db, ids, utility_type, start_date, end_date)
     q = db.query(models.BillRecord).filter(models.BillRecord.property_id == property_id)
     if utility_type:
         q = q.filter(models.BillRecord.utility_type == utility_type.upper())

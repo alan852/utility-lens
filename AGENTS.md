@@ -300,11 +300,11 @@ When importing backups in `merge` mode:
 | | `GET` | `/api/meter-readings/{id}` | Get meter reading by ID |
 | | `PUT` | `/api/meter-readings/{id}` | Update meter reading |
 | | `DELETE`| `/api/meter-readings/{id}` | Delete meter reading |
-| **Analytics** | `GET` | `/api/analytics/kpis?property_id={id}` | Trailing 12m spend, current/prev month MoM %, daily average |
-| | `GET` | `/api/analytics/monthly-breakdown?property_id={id}&months_lookback={n}` | Monthly stacked spend and usage breakdown |
-| | `GET` | `/api/analytics/yoy-comparison?property_id={id}&year_current={y1}&year_previous={y2}` | Calendar month YoY comparison |
-| | `GET` | `/api/analytics/baseload?property_id={id}` | Space heating vs non-heating baseload decomposition |
-| | `POST` | `/api/analytics/simulate-tariffs` | Run what-if simulation against historical consumption |
+| **Analytics** | `GET` | `/api/analytics/kpis?property_id={id}&property_ids={id}` | Trailing 12m spend, current/prev month MoM %, daily average (supports single, comma-separated, or multi-property aggregation; defaults to all) |
+| | `GET` | `/api/analytics/monthly-breakdown?property_id={id}&months_lookback={n}` | Monthly stacked spend and usage breakdown (supports single or multi-property portfolio) |
+| | `GET` | `/api/analytics/yoy-comparison?property_id={id}&year_current={y1}&year_previous={y2}` | Calendar month YoY comparison across selected properties |
+| | `GET` | `/api/analytics/baseload?property_id={id}` | Space heating vs non-heating baseload decomposition (supports multi-property) |
+| | `POST` | `/api/analytics/simulate-tariffs` | Run what-if simulation against historical consumption (supports single or multi-property) |
 | **Data I/O** | `POST` | `/api/data-io/preview-csv` | Upload CSV and get auto-detected headers and sample rows |
 | | `POST` | `/api/data-io/commit-csv` | Import CSV with column mappings and gas conversions |
 | | `GET` | `/api/data-io/sample-csv` | Download sample CSV template |
@@ -318,8 +318,10 @@ When importing backups in `merge` mode:
 
 ### 1. Navigation & State Management
 - **`AppContext` (`frontend/src/context/AppContext.tsx`)**:
-  - `currentProperty`: The active property selected in the navigation bar.
+  - `currentProperty`: The active property selected for data entry (adding bills, tariffs, readings).
+  - `selectedPropertyIds`: Array of property IDs selected for household analytics, defaulting to all properties.
   - `properties`: List of available properties.
+  - `selectAllProperties()` & `togglePropertySelection(id)`: Multi-property analysis filtering.
   - `activeTab`: `'dashboard' | 'bills' | 'readings' | 'simulator' | 'baseload'`.
   - `refreshKey` & `triggerRefresh()`: Triggers re-fetching across active views.
   - `isDarkMode` & `toggleDarkMode()`: Controls dark mode via document root class `'dark'` and `localStorage`.

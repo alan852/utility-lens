@@ -6,6 +6,11 @@ interface AppContextType {
   properties: Property[];
   currentProperty: Property | null;
   setCurrentProperty: (prop: Property) => void;
+  selectedPropertyIds: string[];
+  setSelectedPropertyIds: (ids: string[]) => void;
+  togglePropertySelection: (id: string) => void;
+  selectAllProperties: () => void;
+  isAllPropertiesSelected: boolean;
   loadProperties: () => Promise<void>;
   refreshKey: number;
   triggerRefresh: () => void;
@@ -20,6 +25,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [currentProperty, setCurrentProperty] = useState<Property | null>(null);
+  const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'bills' | 'readings' | 'simulator' | 'baseload'>('dashboard');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -48,11 +54,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!currentProperty || !data.some(p => p.id === currentProperty.id)) {
           setCurrentProperty(data[0]);
         }
+        // Select all properties by default
+        setSelectedPropertyIds(prev => {
+          if (prev.length === 0) {
+            return data.map(p => p.id);
+          }
+          const valid = prev.filter(id => data.some(p => p.id === id));
+          return valid.length > 0 ? valid : data.map(p => p.id);
+        });
       }
     } catch (err) {
       console.error('Failed to load properties:', err);
     }
   };
+
+  const togglePropertySelection = (id: string) => {
+    setSelectedPropertyIds(prev => {
+      if (prev.includes(id)) {
+        const filtered = prev.filter(pId => pId !== id);
+        return filtered.length > 0 ? filtered : prev;
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  const selectAllProperties = () => {
+    setSelectedPropertyIds(properties.map(p => p.id));
+  };
+
+  const isAllPropertiesSelected = properties.length > 0 && properties.every(p => selectedPropertyIds.includes(p.id));
 
   useEffect(() => {
     loadProperties();
@@ -66,6 +97,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         properties,
         currentProperty,
         setCurrentProperty,
+        selectedPropertyIds,
+        setSelectedPropertyIds,
+        togglePropertySelection,
+        selectAllProperties,
+        isAllPropertiesSelected,
         loadProperties,
         refreshKey,
         triggerRefresh,

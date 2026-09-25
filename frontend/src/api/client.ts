@@ -35,6 +35,23 @@ export const api = {
     return res.json();
   },
 
+  async updateProperty(id: string, data: { name?: string; address?: string; currency_symbol?: string }): Promise<Property> {
+    const res = await fetch(`${API_BASE}/properties/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update property');
+    return res.json();
+  },
+
+  async deleteProperty(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/properties/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete property');
+  },
+
   // Tariffs
   async getTariffs(propertyId: string): Promise<TariffPlan[]> {
     const res = await fetch(`${API_BASE}/tariffs?property_id=${propertyId}`);
@@ -138,38 +155,56 @@ export const api = {
   },
 
   // Analytics
-  async getKPIs(propertyId: string): Promise<KPISummary> {
-    const res = await fetch(`${API_BASE}/analytics/kpis?property_id=${propertyId}`);
+  async getKPIs(propertyId?: string | string[]): Promise<KPISummary> {
+    const param = Array.isArray(propertyId) ? propertyId.join(',') : propertyId;
+    const url = param ? `${API_BASE}/analytics/kpis?property_id=${encodeURIComponent(param)}` : `${API_BASE}/analytics/kpis`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to load KPI metrics');
     return res.json();
   },
 
-  async getMonthlyBreakdown(propertyId: string, monthsLookback = 24): Promise<MonthlyBreakdownResponse> {
-    const res = await fetch(`${API_BASE}/analytics/monthly-breakdown?property_id=${propertyId}&months_lookback=${monthsLookback}`);
+  async getMonthlyBreakdown(propertyId?: string | string[], monthsLookback = 24): Promise<MonthlyBreakdownResponse> {
+    const param = Array.isArray(propertyId) ? propertyId.join(',') : propertyId;
+    let url = `${API_BASE}/analytics/monthly-breakdown?months_lookback=${monthsLookback}`;
+    if (param) url += `&property_id=${encodeURIComponent(param)}`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to load monthly breakdown');
     return res.json();
   },
 
-  async getYoYComparison(propertyId: string, yearCurrent?: number, yearPrevious?: number): Promise<YoYComparisonResponse> {
-    let url = `${API_BASE}/analytics/yoy-comparison?property_id=${propertyId}`;
-    if (yearCurrent) url += `&year_current=${yearCurrent}`;
-    if (yearPrevious) url += `&year_previous=${yearPrevious}`;
+  async getYoYComparison(propertyId?: string | string[], yearCurrent?: number, yearPrevious?: number): Promise<YoYComparisonResponse> {
+    const param = Array.isArray(propertyId) ? propertyId.join(',') : propertyId;
+    let url = `${API_BASE}/analytics/yoy-comparison`;
+    const params = new URLSearchParams();
+    if (param) params.append('property_id', param);
+    if (yearCurrent) params.append('year_current', yearCurrent.toString());
+    if (yearPrevious) params.append('year_previous', yearPrevious.toString());
+    const query = params.toString();
+    if (query) url += `?${query}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to load YoY comparison');
     return res.json();
   },
 
-  async getBaseload(propertyId: string): Promise<BaseloadAnalysisResponse> {
-    const res = await fetch(`${API_BASE}/analytics/baseload?property_id=${propertyId}`);
+  async getBaseload(propertyId?: string | string[]): Promise<BaseloadAnalysisResponse> {
+    const param = Array.isArray(propertyId) ? propertyId.join(',') : propertyId;
+    const url = param ? `${API_BASE}/analytics/baseload?property_id=${encodeURIComponent(param)}` : `${API_BASE}/analytics/baseload`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to load baseload analysis');
     return res.json();
   },
 
-  async simulateTariffs(propertyId: string, scenarios: TariffSimulationScenario[], monthsLookback = 12): Promise<TariffSimulationResponse> {
+  async simulateTariffs(propertyId: string | string[], scenarios: TariffSimulationScenario[], monthsLookback = 12): Promise<TariffSimulationResponse> {
+    const payload: any = { scenarios, months_lookback: monthsLookback };
+    if (Array.isArray(propertyId)) {
+      payload.property_ids = propertyId;
+    } else {
+      payload.property_id = propertyId;
+    }
     const res = await fetch(`${API_BASE}/analytics/simulate-tariffs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ property_id: propertyId, scenarios, months_lookback: monthsLookback }),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Failed to run tariff simulation');
     return res.json();

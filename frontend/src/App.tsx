@@ -17,9 +17,10 @@ import { CSVImporterModal } from './components/CSVImporter/CSVImporterModal';
 import { PropertyModal } from './components/Modals/PropertyModal';
 import { TariffModal } from './components/Modals/TariffModal';
 import { ImportBackupModal } from './components/Modals/ImportBackupModal';
+import { PropertyScopeSelector } from './components/PropertyScopeSelector';
 
 export const App: React.FC = () => {
-  const { currentProperty, refreshKey, activeTab } = useApp();
+  const { currentProperty, selectedPropertyIds, refreshKey, activeTab } = useApp();
 
   // Modals state
   const [isAddBillOpen, setIsAddBillOpen] = useState(false);
@@ -37,14 +38,15 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const loadDashboardData = async () => {
-    if (!currentProperty) return;
+    const propParam = selectedPropertyIds.length > 0 ? selectedPropertyIds : (currentProperty ? [currentProperty.id] : []);
+    if (propParam.length === 0) return;
     setLoading(true);
     try {
       const [kpiRes, monthlyRes, yoyRes, baseloadRes] = await Promise.all([
-        api.getKPIs(currentProperty.id),
-        api.getMonthlyBreakdown(currentProperty.id),
-        api.getYoYComparison(currentProperty.id),
-        api.getBaseload(currentProperty.id),
+        api.getKPIs(propParam),
+        api.getMonthlyBreakdown(propParam),
+        api.getYoYComparison(propParam),
+        api.getBaseload(propParam),
       ]);
       setKpis(kpiRes);
       setMonthlyData(monthlyRes);
@@ -59,19 +61,20 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, [currentProperty, refreshKey]);
+  }, [selectedPropertyIds, currentProperty, refreshKey]);
 
   const handleYoYYearChange = async (curYear: number, prevYear: number) => {
-    if (!currentProperty) return;
+    const propParam = selectedPropertyIds.length > 0 ? selectedPropertyIds : (currentProperty ? [currentProperty.id] : []);
+    if (propParam.length === 0) return;
     try {
-      const updated = await api.getYoYComparison(currentProperty.id, curYear, prevYear);
+      const updated = await api.getYoYComparison(propParam, curYear, prevYear);
       setYoyData(updated);
     } catch (err) {
       console.error('Failed to update YoY year:', err);
     }
   };
 
-  const curr = currentProperty?.currency_symbol || '£';
+  const curr = kpis?.currency_symbol || currentProperty?.currency_symbol || '£';
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors">
@@ -88,6 +91,8 @@ export const App: React.FC = () => {
         {/* Render Tab Content */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
+            <PropertyScopeSelector onOpenPropertyModal={() => setIsPropertyModalOpen(true)} />
+
             <KPICards kpis={kpis} loading={loading} />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -114,7 +119,12 @@ export const App: React.FC = () => {
 
         {activeTab === 'simulator' && <TariffSimulator />}
 
-        {activeTab === 'baseload' && <BaseloadChart data={baseloadData} loading={loading} />}
+        {activeTab === 'baseload' && (
+          <div className="space-y-6">
+            <PropertyScopeSelector onOpenPropertyModal={() => setIsPropertyModalOpen(true)} />
+            <BaseloadChart data={baseloadData} loading={loading} />
+          </div>
+        )}
       </main>
 
       {/* Modals */}
