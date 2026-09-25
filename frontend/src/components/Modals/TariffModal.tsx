@@ -26,7 +26,7 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
 
   const resetForm = () => {
     setName('');
-    setUnitRate('0.245');
+    setUnitRate('');
     setStandingCharge('0.55');
     setValidFrom(new Date().toISOString().split('T')[0]);
     setUtilityType('ELECTRICITY');
@@ -39,7 +39,7 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
     setEditingTariff(t);
     setUtilityType(t.utility_type);
     setName(t.name);
-    setUnitRate(t.unit_rate.toString());
+    setUnitRate(t.unit_rate != null ? t.unit_rate.toString() : '');
     setStandingCharge(t.standing_charge.toString());
     setValidFrom(t.valid_from);
     setShowAddForm(true);
@@ -73,14 +73,20 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
     e.preventDefault();
     if (!currentProperty || !name.trim()) return;
 
+    const parsedUnitRate = unitRate.trim() !== '' ? parseFloat(unitRate) : null;
+    if (parsedUnitRate !== null && (isNaN(parsedUnitRate) || parsedUnitRate < 0)) {
+      setError('Unit rate must be a valid positive number or left blank');
+      return;
+    }
+
     try {
       if (editingTariff) {
         await api.updateTariff(editingTariff.id, {
           utility_type: utilityType,
           name: name.trim(),
           valid_from: validFrom,
-          unit_rate: parseFloat(unitRate),
-          standing_charge: parseFloat(standingCharge),
+          unit_rate: parsedUnitRate,
+          standing_charge: parseFloat(standingCharge) || 0.0,
           vat_rate: utilityType === 'WATER' ? 0.0 : 0.05,
         });
       } else {
@@ -89,8 +95,8 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
           utility_type: utilityType,
           name: name.trim(),
           valid_from: validFrom,
-          unit_rate: parseFloat(unitRate),
-          standing_charge: parseFloat(standingCharge),
+          unit_rate: parsedUnitRate,
+          standing_charge: parseFloat(standingCharge) || 0.0,
           vat_rate: utilityType === 'WATER' ? 0.0 : 0.05,
           is_active: true,
         });
@@ -173,9 +179,14 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                           {t.utility_type}
                         </span>
+                        {t.unit_rate == null && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60">
+                            Variable Rate
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Rate: <strong>{curr}{t.unit_rate}</strong>/{isGas || isElec ? 'kWh' : 'm³'} • Standing: <strong>{curr}{t.standing_charge}</strong>/day • Valid from: {t.valid_from}
+                        Rate: <strong>{t.unit_rate != null ? `${curr}${t.unit_rate}/${isGas || isElec ? 'kWh' : 'm³'}` : 'Variable (date-to-date)'}</strong> • Standing: <strong>{curr}{t.standing_charge}</strong>/day • Valid from: {t.valid_from}
                       </p>
                     </div>
                   </div>
@@ -239,16 +250,20 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
 
                 <div>
                   <label className="block text-slate-600 dark:text-slate-300 mb-1 font-medium">
-                    Unit Rate ({curr} / unit)
+                    Unit Rate ({curr} / unit) <span className="text-slate-400 dark:text-slate-500 font-normal text-[10px]">(Optional)</span>
                   </label>
                   <input
                     type="number"
                     step="0.001"
-                    required
+                    min="0"
+                    placeholder="e.g. 0.245 (leave blank if variable)"
                     value={unitRate}
                     onChange={(e) => setUnitRate(e.target.value)}
                     className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2"
                   />
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                    Leave blank if rate varies date-to-date (e.g. tracker tariffs).
+                  </p>
                 </div>
 
                 <div>

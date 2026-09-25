@@ -63,12 +63,17 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
     const vatMult = 1.0 + (activeTariff.vat_rate || 0.05);
 
     const scVal = Math.round(days * activeTariff.standing_charge * vatMult * 100) / 100;
-    const units = parseFloat(totalUnits) || 0;
-    const urVal = Math.round(units * activeTariff.unit_rate * vatMult * 100) / 100;
-
     setStandingChargeCost(scVal.toFixed(2));
-    setUsageCost(urVal.toFixed(2));
-    setTotalCost((scVal + urVal).toFixed(2));
+
+    if (activeTariff.unit_rate != null) {
+      const units = parseFloat(totalUnits) || 0;
+      const urVal = Math.round(units * activeTariff.unit_rate * vatMult * 100) / 100;
+      setUsageCost(urVal.toFixed(2));
+      setTotalCost((scVal + urVal).toFixed(2));
+    } else if (totalCost && parseFloat(totalCost) > 0) {
+      const remainingUsage = Math.max(0, parseFloat(totalCost) - scVal);
+      setUsageCost(remainingUsage.toFixed(2));
+    }
   };
 
   const handleUsageCostChange = (val: string) => {

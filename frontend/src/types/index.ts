@@ -15,7 +15,7 @@ export interface TariffPlan {
   name: string;
   valid_from: string;
   valid_to?: string;
-  unit_rate: number;
+  unit_rate: number | null;
   standing_charge: number;
   vat_rate: number;
   is_active: boolean;

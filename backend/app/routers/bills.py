@@ -45,11 +45,12 @@ def create_bill(bill_in: schemas.BillRecordCreate, db: Session = Depends(get_db)
         tariff = crud.get_active_tariff(db, data["property_id"], util, data["period_start"])
         if tariff:
             vat_mult = 1.0 + tariff.vat_rate
-            unit_cost = round(data["total_units"] * tariff.unit_rate * vat_mult, 2)
             sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
             data["standing_charge_cost"] = sc_cost
-            data["unit_rate_cost"] = unit_cost
-            data["total_cost"] = round(unit_cost + sc_cost, 2)
+            if tariff.unit_rate is not None:
+                unit_cost = round(data["total_units"] * tariff.unit_rate * vat_mult, 2)
+                data["unit_rate_cost"] = unit_cost
+                data["total_cost"] = round(unit_cost + sc_cost, 2)
     elif sc is None:
         tariff = crud.get_active_tariff(db, data["property_id"], util, data["period_start"])
         if tariff and tariff.standing_charge > 0:

@@ -42,7 +42,7 @@ class TariffPlan(Base):
     name = Column(String(100), nullable=False)  # e.g., "Standard Variable 2025"
     valid_from = Column(Date, nullable=False, default=date.today)
     valid_to = Column(Date, nullable=True)
-    unit_rate = Column(Float, nullable=False, default=0.0)  # £ per kWh or m3
+    unit_rate = Column(Float, nullable=True, default=None)  # £ per kWh or m3 (optional for variable/tracker tariffs)
     standing_charge = Column(Float, nullable=False, default=0.0)  # £ per day
     vat_rate = Column(Float, default=0.05)  # 5% UK domestic VAT
     is_active = Column(Boolean, default=True)

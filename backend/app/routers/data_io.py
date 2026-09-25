@@ -188,11 +188,12 @@ def commit_csv(
                 if tariff:
                     days = max(1, (parsed_end - parsed_start).days)
                     vat_mult = 1.0 + tariff.vat_rate
-                    calc_unit_cost = round(total_units * tariff.unit_rate * vat_mult, 2)
                     calc_sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
-                    raw_cost = round(calc_unit_cost + calc_sc_cost, 2)
                     standing_charge_cost = calc_sc_cost
-                    unit_rate_cost = calc_unit_cost
+                    if tariff.unit_rate is not None:
+                        calc_unit_cost = round(total_units * tariff.unit_rate * vat_mult, 2)
+                        raw_cost = round(calc_unit_cost + calc_sc_cost, 2)
+                        unit_rate_cost = calc_unit_cost
             else:
                 if has_standing:
                     unit_rate_cost = round(max(0.0, raw_cost - raw_standing), 2)
@@ -383,7 +384,7 @@ async def import_backup(
                     name=t_name,
                     valid_from=t_vfrom,
                     valid_to=t_vto,
-                    unit_rate=float(t_raw.get("unit_rate", 0.0)),
+                    unit_rate=float(t_raw["unit_rate"]) if t_raw.get("unit_rate") is not None else None,
                     standing_charge=float(t_raw.get("standing_charge", 0.0)),
                     vat_rate=float(t_raw.get("vat_rate", 0.05)),
                     is_active=bool(t_raw.get("is_active", True))

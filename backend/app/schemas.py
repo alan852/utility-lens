@@ -30,7 +30,7 @@ class TariffPlanBase(BaseModel):
     name: str = Field(..., example="Flexible Standard")
     valid_from: date
     valid_to: Optional[date] = None
-    unit_rate: float = Field(..., ge=0, example=0.245)  # £ per kWh or m3
+    unit_rate: Optional[float] = Field(None, ge=0, example=0.245)  # £ per kWh or m3 (optional for variable/tracker tariffs)
     standing_charge: float = Field(..., ge=0, example=0.55)  # £ per day
     vat_rate: float = Field(0.05, ge=0, le=1.0)
     is_active: bool = True
