@@ -85,10 +85,15 @@ export const api = {
   },
 
   // Bills
-  async getBills(propertyId: string, utilityType?: string): Promise<BillRecord[]> {
-    const url = utilityType 
-      ? `${API_BASE}/bills?property_id=${propertyId}&utility_type=${utilityType}` 
-      : `${API_BASE}/bills?property_id=${propertyId}`;
+  async getBills(propertyId?: string | string[], utilityType?: string): Promise<BillRecord[]> {
+    const pParam = Array.isArray(propertyId) ? propertyId.join(',') : (propertyId || '');
+    let url = `${API_BASE}/bills`;
+    const params = new URLSearchParams();
+    if (pParam) params.append('property_id', pParam);
+    if (utilityType) params.append('utility_type', utilityType);
+    const queryString = params.toString();
+    if (queryString) url += `?${queryString}`;
+
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to load bills');
     return res.json();
@@ -120,10 +125,15 @@ export const api = {
   },
 
   // Meter Readings
-  async getMeterReadings(propertyId: string, utilityType?: string): Promise<MeterReading[]> {
-    const url = utilityType
-      ? `${API_BASE}/meter-readings?property_id=${propertyId}&utility_type=${utilityType}`
-      : `${API_BASE}/meter-readings?property_id=${propertyId}`;
+  async getMeterReadings(propertyId?: string | string[], utilityType?: string): Promise<MeterReading[]> {
+    const pParam = Array.isArray(propertyId) ? propertyId.join(',') : (propertyId || '');
+    let url = `${API_BASE}/meter-readings`;
+    const params = new URLSearchParams();
+    if (pParam) params.append('property_id', pParam);
+    if (utilityType) params.append('utility_type', utilityType);
+    const queryString = params.toString();
+    if (queryString) url += `?${queryString}`;
+
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to load meter readings');
     return res.json();

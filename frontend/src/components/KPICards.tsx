@@ -43,10 +43,13 @@ export const KPICards: React.FC<KPICardsProps> = ({ kpis, loading }) => {
   const momPct = kpis.month_over_month_change_pct;
   const isIncrease = momPct !== null && momPct > 0;
 
-  // Calculate percentage shares of trailing 12m spend
+  // Calculate percentage shares of trailing 12m spend sorted descending by spend
   const totalT12 = kpis.total_spend_trailing_12m || 1;
   const activeUtilities = UTILITY_CONFIG.filter((u) => (kpis.spend_by_utility_trailing_12m[u.key] || 0) > 0);
-  const displayUtilities = activeUtilities.length > 0 ? activeUtilities : UTILITY_CONFIG.slice(0, 3);
+  const baseUtilities = activeUtilities.length > 0 ? activeUtilities : UTILITY_CONFIG.slice(0, 3);
+  const displayUtilities = [...baseUtilities].sort(
+    (a, b) => (kpis.spend_by_utility_trailing_12m[b.key] || 0) - (kpis.spend_by_utility_trailing_12m[a.key] || 0)
+  );
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

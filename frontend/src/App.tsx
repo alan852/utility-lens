@@ -17,7 +17,6 @@ import { CSVImporterModal } from './components/CSVImporter/CSVImporterModal';
 import { PropertyModal } from './components/Modals/PropertyModal';
 import { TariffModal } from './components/Modals/TariffModal';
 import { ImportBackupModal } from './components/Modals/ImportBackupModal';
-import { PropertyScopeSelector } from './components/PropertyScopeSelector';
 
 export const App: React.FC = () => {
   const { currentProperty, selectedPropertyIds, refreshKey, activeTab } = useApp();
@@ -91,8 +90,6 @@ export const App: React.FC = () => {
         {/* Render Tab Content */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
-            <PropertyScopeSelector onOpenPropertyModal={() => setIsPropertyModalOpen(true)} />
-
             <KPICards kpis={kpis} loading={loading} />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -121,7 +118,6 @@ export const App: React.FC = () => {
 
         {activeTab === 'baseload' && (
           <div className="space-y-6">
-            <PropertyScopeSelector onOpenPropertyModal={() => setIsPropertyModalOpen(true)} />
             <BaseloadChart data={baseloadData} loading={loading} />
           </div>
         )}

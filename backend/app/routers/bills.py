@@ -13,13 +13,14 @@ def convert_gas_m3_to_kwh(m3_units: float) -> float:
 
 @router.get("", response_model=List[schemas.BillRecordResponse])
 def read_bills(
-    property_id: str,
+    property_id: Optional[str] = Query(None),
     utility_type: Optional[str] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     db: Session = Depends(get_db)
 ):
-    return crud.get_bills(db, property_id, utility_type, start_date, end_date)
+    target_property_id = property_id or "ALL"
+    return crud.get_bills(db, target_property_id, utility_type, start_date, end_date)
 
 @router.post("", response_model=schemas.BillRecordResponse, status_code=status.HTTP_201_CREATED)
 def create_bill(bill_in: schemas.BillRecordCreate, db: Session = Depends(get_db)):

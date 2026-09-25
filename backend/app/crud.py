@@ -112,6 +112,10 @@ def get_bills(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None
 ) -> List[models.BillRecord]:
+    if not property_id or property_id == "ALL":
+        all_props = db.query(models.Property.id).all()
+        ids = [p[0] for p in all_props]
+        return get_bills_for_properties(db, ids, utility_type, start_date, end_date)
     if "," in property_id:
         ids = [p.strip() for p in property_id.split(",") if p.strip()]
         return get_bills_for_properties(db, ids, utility_type, start_date, end_date)
@@ -158,11 +162,30 @@ def delete_bill(db: Session, bill_id: str) -> bool:
     return True
 
 # Meter Readings
+def get_meter_readings_for_properties(
+    db: Session,
+    property_ids: List[str],
+    utility_type: Optional[str] = None
+) -> List[models.MeterReading]:
+    if not property_ids:
+        return []
+    q = db.query(models.MeterReading).filter(models.MeterReading.property_id.in_(property_ids))
+    if utility_type:
+        q = q.filter(models.MeterReading.utility_type == utility_type.upper())
+    return q.order_by(desc(models.MeterReading.reading_date)).all()
+
 def get_meter_readings(
     db: Session, 
     property_id: str, 
     utility_type: Optional[str] = None
 ) -> List[models.MeterReading]:
+    if not property_id or property_id == "ALL":
+        all_props = db.query(models.Property.id).all()
+        ids = [p[0] for p in all_props]
+        return get_meter_readings_for_properties(db, ids, utility_type)
+    if "," in property_id:
+        ids = [p.strip() for p in property_id.split(",") if p.strip()]
+        return get_meter_readings_for_properties(db, ids, utility_type)
     q = db.query(models.MeterReading).filter(models.MeterReading.property_id == property_id)
     if utility_type:
         q = q.filter(models.MeterReading.utility_type == utility_type.upper())

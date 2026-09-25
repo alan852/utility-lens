@@ -6,17 +6,19 @@ import { Trash2, Pencil, Zap, Flame, Droplets, Filter, Landmark, Wifi, ShieldChe
 import { EditBillModal } from '../Modals/EditBillModal';
 
 export const BillTable: React.FC = () => {
-  const { currentProperty, refreshKey, triggerRefresh } = useApp();
+  const { properties, selectedPropertyIds, isAllPropertiesSelected, refreshKey, triggerRefresh } = useApp();
   const [bills, setBills] = useState<BillRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [filterUtil, setFilterUtil] = useState<string>('');
   const [editingBill, setEditingBill] = useState<BillRecord | null>(null);
 
   const loadBills = async () => {
-    if (!currentProperty) return;
     setLoading(true);
     try {
-      const data = await api.getBills(currentProperty.id, filterUtil || undefined);
+      const propParam = isAllPropertiesSelected 
+        ? undefined 
+        : (selectedPropertyIds.length > 0 ? selectedPropertyIds : undefined);
+      const data = await api.getBills(propParam, filterUtil || undefined);
       setBills(data);
     } catch (err) {
       console.error('Failed to load bills:', err);
@@ -27,7 +29,7 @@ export const BillTable: React.FC = () => {
 
   useEffect(() => {
     loadBills();
-  }, [currentProperty, filterUtil, refreshKey]);
+  }, [selectedPropertyIds, isAllPropertiesSelected, filterUtil, refreshKey]);
 
   const handleDelete = async (id: string) => {
     if (confirm('Delete this bill record?')) {
@@ -40,8 +42,6 @@ export const BillTable: React.FC = () => {
     }
   };
 
-  const curr = currentProperty?.currency_symbol || '£';
-
   return (
     <div className="bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
       {/* Table Toolbar */}
@@ -49,7 +49,7 @@ export const BillTable: React.FC = () => {
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Historical Bill Records</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {bills.length} statements recorded for {currentProperty?.name} • Standing charge separated for UK billing
+            {bills.length} statements recorded • Standing charge separated for UK billing
           </p>
         </div>
 
@@ -77,6 +77,9 @@ export const BillTable: React.FC = () => {
         <table className="w-full text-left text-xs border-collapse">
           <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px] border-b border-slate-200 dark:border-slate-700/80 shadow-sm backdrop-blur">
             <tr>
+              {properties.length > 1 && (
+                <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Property</th>
+              )}
               <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Utility</th>
               <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Billing Period</th>
               <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Consumption</th>
@@ -92,14 +95,16 @@ export const BillTable: React.FC = () => {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
             {loading ? (
               <tr>
-                <td colSpan={10} className="py-8 text-center text-slate-400">Loading records...</td>
+                <td colSpan={properties.length > 1 ? 11 : 10} className="py-8 text-center text-slate-400">Loading records...</td>
               </tr>
             ) : bills.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-8 text-center text-slate-400">No bill records found. Use "Add Bill" or "Import CSV" to add data.</td>
+                <td colSpan={properties.length > 1 ? 11 : 10} className="py-8 text-center text-slate-400">No bill records found. Use "Add Bill" or "Import CSV" to add data.</td>
               </tr>
             ) : (
               bills.map((b) => {
+                const billProp = properties.find(p => p.id === b.property_id);
+                const curr = billProp?.currency_symbol || '£';
                 const isElec = b.utility_type === 'ELECTRICITY';
                 const isGas = b.utility_type === 'GAS';
                 const isWater = b.utility_type === 'WATER';
@@ -116,6 +121,13 @@ export const BillTable: React.FC = () => {
 
                 return (
                   <tr key={b.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    {properties.length > 1 && (
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                          {billProp?.name || 'Property'}
+                        </span>
+                      </td>
+                    )}
                     <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex items-center space-x-1.5 font-bold">
                         {isElec ? (

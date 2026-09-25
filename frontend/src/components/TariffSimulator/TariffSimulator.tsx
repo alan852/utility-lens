@@ -3,7 +3,6 @@ import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { TariffSimulationResponse, TariffSimulationScenario } from '../../types';
 import { Calculator, TrendingDown, TrendingUp, AlertCircle, RefreshCw, Zap, Flame } from 'lucide-react';
-import { PropertyScopeSelector } from '../PropertyScopeSelector';
 
 export const TariffSimulator: React.FC = () => {
   const { currentProperty, selectedPropertyIds } = useApp();
@@ -54,8 +53,6 @@ export const TariffSimulator: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <PropertyScopeSelector />
-
       {/* Header */}
       <div className="bg-white dark:bg-slate-800/80 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

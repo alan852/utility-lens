@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../api/client';
 import { 
@@ -15,7 +15,10 @@ import {
   Database, 
   Download, 
   FileUp,
-  Building
+  Building,
+  ChevronDown,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -37,10 +40,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { 
     properties, 
-    currentProperty, 
-    setCurrentProperty, 
     selectedPropertyIds,
     setSelectedPropertyIds,
+    togglePropertySelection,
     selectAllProperties,
     isAllPropertiesSelected,
     triggerRefresh, 
@@ -51,6 +53,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   } = useApp();
 
   const [loadingSeed, setLoadingSeed] = useState(false);
+  const [isPropertyDropdownOpen, setIsPropertyDropdownOpen] = useState(false);
+  const propertyDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (propertyDropdownRef.current && !propertyDropdownRef.current.contains(e.target as Node)) {
+        setIsPropertyDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSeedDemo = async () => {
     if (confirm("Load realistic UK 18-month demo dataset for testing? This will populate sample electricity, gas, and water data.")) {
@@ -79,50 +93,121 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">
                 Utility<span className="text-sky-500">Lens</span>
               </span>
-              <span className="hidden sm:inline-block ml-2 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                UK Home Energy
-              </span>
             </div>
           </div>
 
-          {/* Property Switcher */}
+          {/* Top Bar Property Selection */}
           <div className="flex items-center space-x-2">
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700">
-              <Building className="w-4 h-4 ml-2 text-slate-500 dark:text-slate-400" />
-              <select
-                className="bg-transparent text-sm font-medium text-slate-800 dark:text-slate-200 py-1 px-2 focus:outline-none cursor-pointer"
-                value={isAllPropertiesSelected ? 'ALL' : (selectedPropertyIds.length === 1 ? selectedPropertyIds[0] : (currentProperty?.id || ''))}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === 'ALL') {
-                    selectAllProperties();
-                  } else {
-                    const selected = properties.find(p => p.id === val);
-                    if (selected) {
-                      setCurrentProperty(selected);
-                      setSelectedPropertyIds([selected.id]);
-                    }
-                  }
-                }}
-              >
-                {properties.length > 1 && (
-                  <option value="ALL" className="dark:bg-slate-800 font-semibold text-sky-600 dark:text-sky-400">
-                    All Properties ({properties.length} Combined)
-                  </option>
-                )}
-                {properties.map(p => (
-                  <option key={p.id} value={p.id} className="dark:bg-slate-800">
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={onOpenPropertyModal}
-                title="Manage & Edit Properties"
-                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+            <div className="relative" ref={propertyDropdownRef}>
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 border border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setIsPropertyDropdownOpen(!isPropertyDropdownOpen)}
+                  className="flex items-center space-x-2 text-xs font-semibold text-slate-800 dark:text-slate-200 py-1 px-2.5 hover:bg-slate-200/70 dark:hover:bg-slate-700/70 rounded-md transition"
+                >
+                  <Building className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+                  <span className="max-w-[140px] sm:max-w-[220px] truncate">
+                    {isAllPropertiesSelected
+                      ? `All Properties (${properties.length} Combined)`
+                      : selectedPropertyIds.length === 1
+                      ? (properties.find(p => p.id === selectedPropertyIds[0])?.name || '1 Property')
+                      : `${selectedPropertyIds.length} Properties Selected`}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenPropertyModal}
+                  title="Manage Properties"
+                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition ml-0.5"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Dropdown Menu */}
+              {isPropertyDropdownOpen && (
+                <div className="absolute left-0 mt-1.5 w-72 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 py-2 z-50 text-xs">
+                  <div className="px-3 py-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    Select Properties to Analyze
+                  </div>
+
+                  {properties.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          selectAllProperties();
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60 transition ${
+                          isAllPropertiesSelected ? 'text-sky-600 dark:text-sky-400 font-semibold' : 'text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          {isAllPropertiesSelected ? (
+                            <CheckSquare className="w-4 h-4 text-sky-500" />
+                          ) : (
+                            <Square className="w-4 h-4 text-slate-400" />
+                          )}
+                          <span>All Properties ({properties.length} Combined)</span>
+                        </div>
+                      </button>
+                      <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
+                    </>
+                  )}
+
+                  <div className="max-h-60 overflow-y-auto py-0.5">
+                    {properties.map((p) => {
+                      const isChecked = selectedPropertyIds.includes(p.id);
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => togglePropertySelection(p.id)}
+                          className={`group flex items-center justify-between px-3 py-1.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/60 transition ${
+                            isChecked ? 'text-slate-900 dark:text-white font-medium' : 'text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2 min-w-0 pr-2">
+                            {isChecked ? (
+                              <CheckSquare className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            )}
+                            <div className="truncate">
+                              <span className="block truncate">{p.name}</span>
+                              {p.address && <span className="block text-[10px] text-slate-400 truncate">{p.address}</span>}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPropertyIds([p.id]);
+                              setIsPropertyDropdownOpen(false);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 text-[10px] font-semibold text-sky-600 dark:text-sky-400 hover:underline px-1 py-0.5 rounded transition"
+                          >
+                            Only
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPropertyDropdownOpen(false);
+                      onOpenPropertyModal();
+                    }}
+                    className="w-full flex items-center space-x-2 px-3 py-1.5 text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition text-left"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Manage Properties...</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

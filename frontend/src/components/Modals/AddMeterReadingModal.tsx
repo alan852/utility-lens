@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { UtilityType } from '../../types';
@@ -10,8 +10,9 @@ interface AddMeterReadingModalProps {
 }
 
 export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOpen, onClose }) => {
-  const { currentProperty, triggerRefresh } = useApp();
+  const { properties, triggerRefresh } = useApp();
 
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [utilityType, setUtilityType] = useState<UtilityType>('ELECTRICITY');
   const [readingDate, setReadingDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [meterIndex, setMeterIndex] = useState<string>('');
@@ -21,11 +22,46 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialize selected property defaulting to last record
+  useEffect(() => {
+    if (!isOpen || properties.length === 0) return;
+
+    const initProperty = async () => {
+      let defaultId = localStorage.getItem('last_meter_reading_property_id');
+      if (!defaultId || !properties.some(p => p.id === defaultId)) {
+        try {
+          const recentReadings = await api.getMeterReadings();
+          if (recentReadings.length > 0 && recentReadings[0].property_id && properties.some(p => p.id === recentReadings[0].property_id)) {
+            defaultId = recentReadings[0].property_id;
+          }
+        } catch (e) {
+          // Fallback to last bill property or first property
+        }
+      }
+      if (!defaultId || !properties.some(p => p.id === defaultId)) {
+        const lastBillProp = localStorage.getItem('last_bill_property_id');
+        if (lastBillProp && properties.some(p => p.id === lastBillProp)) {
+          defaultId = lastBillProp;
+        } else {
+          defaultId = properties[0]?.id || '';
+        }
+      }
+      setSelectedPropertyId(defaultId);
+    };
+
+    initProperty();
+  }, [isOpen, properties]);
+
   if (!isOpen) return null;
+
+  const selectedProperty = properties.find((p) => p.id === selectedPropertyId) || properties[0];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentProperty) return;
+    if (!selectedPropertyId) {
+      setError('Please select a property.');
+      return;
+    }
     if (!meterIndex || parseFloat(meterIndex) < 0) {
       setError('Please enter a valid cumulative meter reading index.');
       return;
@@ -35,7 +71,7 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
     setError(null);
     try {
       await api.createMeterReading({
-        property_id: currentProperty.id,
+        property_id: selectedPropertyId,
         utility_type: utilityType,
         reading_date: readingDate,
         meter_index: parseFloat(meterIndex),
@@ -44,6 +80,7 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
         notes: notes.trim() || undefined,
       });
 
+      localStorage.setItem('last_meter_reading_property_id', selectedPropertyId);
       triggerRefresh();
       onClose();
     } catch (err: any) {
@@ -65,7 +102,7 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Record Meter Reading</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Log cumulative register value for {currentProperty?.name}
+                Log cumulative register value {selectedProperty ? `for ${selectedProperty.name}` : ''}
               </p>
             </div>
           </div>
@@ -80,6 +117,26 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
             <div className="p-3 rounded-lg bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs flex items-center">
               <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
               {error}
+            </div>
+          )}
+
+          {/* Property Selection */}
+          {properties.length > 1 && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Property *
+              </label>
+              <select
+                value={selectedPropertyId}
+                onChange={(e) => setSelectedPropertyId(e.target.value)}
+                className="w-full text-xs font-medium bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-slate-900 dark:text-white focus:ring-1 focus:ring-amber-500"
+              >
+                {properties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.address ? `(${p.address})` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 

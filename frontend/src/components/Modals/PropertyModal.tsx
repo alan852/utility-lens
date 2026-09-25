@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { Property } from '../../types';
-import { Building, X, Plus, Check, Pencil, Trash2 } from 'lucide-react';
+import { Building, X, Plus, Pencil, Trash2 } from 'lucide-react';
 
 interface PropertyModalProps {
   isOpen: boolean;
@@ -122,7 +122,7 @@ export const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose })
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Properties</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Manage, edit, or switch your tracked homes
+                Add, edit, or remove your household properties
               </p>
             </div>
           </div>
@@ -136,7 +136,6 @@ export const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose })
           {/* Properties List */}
           <div className="space-y-2">
             {properties.map((p) => {
-              const isSelected = currentProperty?.id === p.id;
               const isBeingEdited = editingProperty?.id === p.id && showForm;
 
               return (
@@ -145,25 +144,11 @@ export const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose })
                   className={`p-3.5 rounded-xl border flex items-center justify-between transition ${
                     isBeingEdited
                       ? 'border-sky-500 bg-sky-50/50 dark:bg-sky-950/30 ring-1 ring-sky-500'
-                      : isSelected
-                      ? 'border-sky-400 bg-sky-50/70 dark:bg-sky-950/40 text-sky-900 dark:text-sky-100'
-                      : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-200'
                   }`}
                 >
-                  <div
-                    onClick={() => {
-                      setCurrentProperty(p);
-                    }}
-                    className="flex-1 cursor-pointer pr-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">{p.name}</h4>
-                      {isSelected && (
-                        <span className="flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300">
-                          <Check className="w-3 h-3 mr-0.5" /> Active
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex-1 pr-2">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">{p.name}</h4>
                     {p.address && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{p.address}</p>}
                     <span className="text-[10px] text-slate-400 block mt-0.5">Currency: {p.currency_symbol}</span>
                   </div>
@@ -172,7 +157,7 @@ export const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose })
                   <div className="flex items-center space-x-1">
                     <button
                       onClick={() => handleStartEdit(p)}
-                      className="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/60 rounded-lg transition"
+                      className="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-slate-700 rounded-lg transition"
                       title="Edit property details"
                     >
                       <Pencil className="w-4 h-4" />
@@ -180,7 +165,7 @@ export const PropertyModal: React.FC<PropertyModalProps> = ({ isOpen, onClose })
                     {properties.length > 1 && (
                       <button
                         onClick={() => handleDelete(p)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-700 rounded-lg transition"
                         title="Delete property"
                       >
                         <Trash2 className="w-4 h-4" />

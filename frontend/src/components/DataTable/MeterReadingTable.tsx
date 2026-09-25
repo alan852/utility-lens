@@ -6,16 +6,18 @@ import { Trash2, Pencil, Zap, Flame } from 'lucide-react';
 import { EditMeterReadingModal } from '../Modals/EditMeterReadingModal';
 
 export const MeterReadingTable: React.FC = () => {
-  const { currentProperty, refreshKey, triggerRefresh } = useApp();
+  const { properties, selectedPropertyIds, isAllPropertiesSelected, refreshKey, triggerRefresh } = useApp();
   const [readings, setReadings] = useState<MeterReading[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [editingReading, setEditingReading] = useState<MeterReading | null>(null);
 
   const loadReadings = async () => {
-    if (!currentProperty) return;
     setLoading(true);
     try {
-      const data = await api.getMeterReadings(currentProperty.id);
+      const propParam = isAllPropertiesSelected 
+        ? undefined 
+        : (selectedPropertyIds.length > 0 ? selectedPropertyIds : undefined);
+      const data = await api.getMeterReadings(propParam);
       setReadings(data);
     } catch (err) {
       console.error('Failed to load readings:', err);
@@ -26,7 +28,7 @@ export const MeterReadingTable: React.FC = () => {
 
   useEffect(() => {
     loadReadings();
-  }, [currentProperty, refreshKey]);
+  }, [selectedPropertyIds, isAllPropertiesSelected, refreshKey]);
 
   const handleDelete = async (id: string) => {
     if (confirm('Delete this meter reading?')) {
@@ -44,7 +46,7 @@ export const MeterReadingTable: React.FC = () => {
       <div className="p-4 border-b border-slate-200 dark:border-slate-700">
         <h3 className="text-base font-bold text-slate-900 dark:text-white">Physical Meter Readings</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Cumulative index reads for {currentProperty?.name}
+          {readings.length} cumulative index reads recorded
         </p>
       </div>
 
@@ -52,6 +54,9 @@ export const MeterReadingTable: React.FC = () => {
         <table className="w-full text-left text-xs border-collapse">
           <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px] border-b border-slate-200 dark:border-slate-700/80 shadow-sm backdrop-blur">
             <tr>
+              {properties.length > 1 && (
+                <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Property</th>
+              )}
               <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Utility</th>
               <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Reading Date</th>
               <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Meter Register Index</th>
@@ -63,17 +68,25 @@ export const MeterReadingTable: React.FC = () => {
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-400">Loading readings...</td>
+                <td colSpan={properties.length > 1 ? 7 : 6} className="py-8 text-center text-slate-400">Loading readings...</td>
               </tr>
             ) : readings.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-400">No physical meter readings logged yet.</td>
+                <td colSpan={properties.length > 1 ? 7 : 6} className="py-8 text-center text-slate-400">No physical meter readings logged yet.</td>
               </tr>
             ) : (
               readings.map((r) => {
+                const readingProp = properties.find(p => p.id === r.property_id);
                 const isElec = r.utility_type === 'ELECTRICITY';
                 return (
                   <tr key={r.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    {properties.length > 1 && (
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                          {readingProp?.name || 'Property'}
+                        </span>
+                      </td>
+                    )}
                     <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex items-center space-x-1.5 font-bold">
                         {isElec ? (

@@ -11,7 +11,7 @@ interface EditBillModalProps {
 }
 
 export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onClose }) => {
-  const { currentProperty, triggerRefresh } = useApp();
+  const { properties, triggerRefresh } = useApp();
 
   const [utilityType, setUtilityType] = useState<UtilityType>('ELECTRICITY');
   const [periodStart, setPeriodStart] = useState<string>('');
@@ -27,10 +27,10 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && currentProperty) {
-      api.getTariffs(currentProperty.id).then(setTariffs).catch(console.error);
+    if (isOpen && bill?.property_id) {
+      api.getTariffs(bill.property_id).then(setTariffs).catch(console.error);
     }
-  }, [isOpen, currentProperty]);
+  }, [isOpen, bill?.property_id]);
 
   useEffect(() => {
     if (bill) {
@@ -52,12 +52,26 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
 
   if (!isOpen || !bill) return null;
 
-  const curr = currentProperty?.currency_symbol || '£';
+  const billProp = properties.find((p) => p.id === bill.property_id);
+  const curr = billProp?.currency_symbol || '£';
   const isMetered = utilityType === 'ELECTRICITY' || utilityType === 'GAS' || utilityType === 'WATER';
   const activeTariff = tariffs.find((t) => t.utility_type === utilityType && t.is_active);
 
+  const handleUtilitySelect = (type: UtilityType) => {
+    setUtilityType(type);
+    const metered = type === 'ELECTRICITY' || type === 'GAS' || type === 'WATER';
+    if (!metered) {
+      setUsageCost('');
+      setStandingChargeCost('');
+    } else {
+      const u = parseFloat(usageCost) || 0;
+      const s = parseFloat(standingChargeCost) || 0;
+      setTotalCost(u > 0 || s > 0 ? (u + s).toFixed(2) : '');
+    }
+  };
+
   const handleAutoFillFromTariff = () => {
-    if (!activeTariff) return;
+    if (!activeTariff || !isMetered) return;
     const start = new Date(periodStart).getTime();
     const end = new Date(periodEnd).getTime();
     const days = Math.max(1, Math.round((end - start) / (1000 * 3600 * 24)));
@@ -71,9 +85,6 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
       const urVal = Math.round(units * activeTariff.unit_rate * vatMult * 100) / 100;
       setUsageCost(urVal.toFixed(2));
       setTotalCost((scVal + urVal).toFixed(2));
-    } else if (totalCost && parseFloat(totalCost) > 0) {
-      const remainingUsage = Math.max(0, parseFloat(totalCost) - scVal);
-      setUsageCost(remainingUsage.toFixed(2));
     }
   };
 
@@ -81,27 +92,18 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
     setUsageCost(val);
     const u = parseFloat(val) || 0;
     const s = parseFloat(standingChargeCost) || 0;
-    if (val !== '' || standingChargeCost !== '') {
-      setTotalCost((u + s).toFixed(2));
-    }
+    setTotalCost((u + s).toFixed(2));
   };
 
   const handleStandingChargeChange = (val: string) => {
     setStandingChargeCost(val);
     const u = parseFloat(usageCost) || 0;
     const s = parseFloat(val) || 0;
-    if (val !== '' || usageCost !== '') {
-      setTotalCost((u + s).toFixed(2));
-    }
+    setTotalCost((u + s).toFixed(2));
   };
 
   const handleTotalCostChange = (val: string) => {
     setTotalCost(val);
-    if (val !== '' && standingChargeCost !== '') {
-      const tot = parseFloat(val) || 0;
-      const s = parseFloat(standingChargeCost) || 0;
-      setUsageCost(Math.max(0, tot - s).toFixed(2));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,16 +113,22 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
       return;
     }
 
-    const scNum = standingChargeCost !== '' ? parseFloat(standingChargeCost) : undefined;
-    const urNum = usageCost !== '' ? parseFloat(usageCost) : undefined;
-    let costNum = totalCost !== '' ? parseFloat(totalCost) : 0.0;
-    if (costNum === 0 && scNum !== undefined && urNum !== undefined) {
-      costNum = Math.round((scNum + urNum) * 100) / 100;
-    }
+    const scNum = isMetered && standingChargeCost !== '' ? parseFloat(standingChargeCost) : undefined;
+    const urNum = isMetered && usageCost !== '' ? parseFloat(usageCost) : undefined;
+    let costNum = 0.0;
 
-    if (!isMetered && costNum <= 0) {
-      setError('Please enter a valid bill amount.');
-      return;
+    if (isMetered) {
+      costNum = Math.round(((urNum || 0) + (scNum || 0)) * 100) / 100;
+      if (costNum <= 0) {
+        setError('Please enter usage cost and standing charge.');
+        return;
+      }
+    } else {
+      costNum = totalCost !== '' ? parseFloat(totalCost) : 0.0;
+      if (costNum <= 0) {
+        setError('Please enter a valid bill amount.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -189,7 +197,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => setUtilityType('ELECTRICITY')}
+                onClick={() => handleUtilitySelect('ELECTRICITY')}
                 className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
                   utilityType === 'ELECTRICITY'
                     ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold'
@@ -202,7 +210,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
 
               <button
                 type="button"
-                onClick={() => setUtilityType('GAS')}
+                onClick={() => handleUtilitySelect('GAS')}
                 className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
                   utilityType === 'GAS'
                     ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold'
@@ -215,7 +223,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
 
               <button
                 type="button"
-                onClick={() => setUtilityType('WATER')}
+                onClick={() => handleUtilitySelect('WATER')}
                 className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
                   utilityType === 'WATER'
                     ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 font-bold'
@@ -228,7 +236,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
 
               <button
                 type="button"
-                onClick={() => setUtilityType('COUNCIL_TAX')}
+                onClick={() => handleUtilitySelect('COUNCIL_TAX')}
                 className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
                   utilityType === 'COUNCIL_TAX'
                     ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-bold'
@@ -241,7 +249,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
 
               <button
                 type="button"
-                onClick={() => setUtilityType('BROADBAND')}
+                onClick={() => handleUtilitySelect('BROADBAND')}
                 className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
                   utilityType === 'BROADBAND'
                     ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold'
@@ -254,7 +262,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
 
               <button
                 type="button"
-                onClick={() => setUtilityType('ESTATE_SERVICE_CHARGE')}
+                onClick={() => handleUtilitySelect('ESTATE_SERVICE_CHARGE')}
                 className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
                   utilityType === 'ESTATE_SERVICE_CHARGE'
                     ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 font-bold'
@@ -357,10 +365,12 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
                   Cost Breakdown
                 </label>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Separate usage consumption from UK daily standing charge
+                  {isMetered 
+                    ? 'Enter unit rate and standing charge; total is calculated automatically'
+                    : 'Fixed services use total billed amount only'}
                 </p>
               </div>
-              {activeTariff && (
+              {activeTariff && isMetered && (
                 <button
                   type="button"
                   onClick={handleAutoFillFromTariff}
@@ -384,9 +394,15 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
                     type="number"
                     step="0.01"
                     placeholder="0.00"
-                    value={usageCost}
+                    disabled={!isMetered}
+                    readOnly={!isMetered}
+                    value={isMetered ? usageCost : ''}
                     onChange={(e) => handleUsageCostChange(e.target.value)}
-                    className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 pl-7 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-sky-500"
+                    className={`w-full text-xs border rounded-lg p-2 pl-7 ${
+                      isMetered
+                        ? 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-sky-500'
+                        : 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-400 cursor-not-allowed'
+                    }`}
                   />
                 </div>
               </div>
@@ -401,9 +417,15 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
                     type="number"
                     step="0.01"
                     placeholder="0.00"
-                    value={standingChargeCost}
+                    disabled={!isMetered}
+                    readOnly={!isMetered}
+                    value={isMetered ? standingChargeCost : ''}
                     onChange={(e) => handleStandingChargeChange(e.target.value)}
-                    className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 pl-7 text-amber-700 dark:text-amber-400 focus:ring-1 focus:ring-amber-500"
+                    className={`w-full text-xs border rounded-lg p-2 pl-7 ${
+                      isMetered
+                        ? 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-amber-700 dark:text-amber-400 focus:ring-1 focus:ring-amber-500'
+                        : 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-800 text-slate-400 cursor-not-allowed'
+                    }`}
                   />
                 </div>
               </div>
@@ -416,7 +438,9 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
                   Total Billed Amount ({curr})
                 </label>
                 <span className="text-[10px] text-slate-400">
-                  {usageCost && standingChargeCost ? 'Sum of usage + standing charge' : 'Leave blank to auto-calculate from tariff'}
+                  {isMetered 
+                    ? 'Calculated automatically: Usage Cost + Standing Charge' 
+                    : 'Enter statement bill amount'}
                 </span>
               </div>
               <div className="relative">
@@ -424,10 +448,16 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
                 <input
                   type="number"
                   step="0.01"
+                  required
                   placeholder="0.00"
+                  readOnly={isMetered}
                   value={totalCost}
                   onChange={(e) => handleTotalCostChange(e.target.value)}
-                  className="w-full text-sm font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 pl-8 text-slate-900 dark:text-white focus:ring-1 focus:ring-sky-500"
+                  className={`w-full text-sm font-semibold border rounded-lg p-2.5 pl-8 ${
+                    isMetered
+                      ? 'bg-slate-100 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 cursor-not-allowed'
+                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-1 focus:ring-sky-500'
+                  }`}
                 />
               </div>
             </div>
