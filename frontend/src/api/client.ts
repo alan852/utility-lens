@@ -11,7 +11,8 @@ import {
   TariffSimulationScenario,
   CSVPreviewResponse,
   CSVImportResult,
-  ColumnMapping
+  ColumnMapping,
+  BackupImportResult
 } from '../types';
 
 const API_BASE = '/api';
@@ -178,5 +179,19 @@ export const api = {
 
   getExportBackupUrl(): string {
     return `${API_BASE}/data-io/export-backup`;
+  },
+
+  async importBackup(file: File, mode: 'merge' | 'replace' = 'merge'): Promise<BackupImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/data-io/import-backup?mode=${mode}`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to import backup' }));
+      throw new Error(err.detail || 'Failed to import backup');
+    }
+    return res.json();
   }
 };

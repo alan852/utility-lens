@@ -154,6 +154,7 @@ export interface ColumnMapping {
   default_utility_type?: string;
   usage_col: string;
   cost_col?: string;
+  standing_charge_col?: string;
   end_date_col?: string;
   notes_col?: string;
   gas_unit_type?: string;
@@ -173,3 +174,13 @@ export interface CSVImportResult {
   errors: string[];
   message: string;
 }
+
+export interface BackupImportResult {
+  success: boolean;
+  message: string;
+  properties_count: number;
+  bills_count: number;
+  readings_count: number;
+  tariffs_count: number;
+}
+

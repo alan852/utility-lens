@@ -16,6 +16,7 @@ import { AddMeterReadingModal } from './components/Modals/AddMeterReadingModal';
 import { CSVImporterModal } from './components/CSVImporter/CSVImporterModal';
 import { PropertyModal } from './components/Modals/PropertyModal';
 import { TariffModal } from './components/Modals/TariffModal';
+import { ImportBackupModal } from './components/Modals/ImportBackupModal';
 
 export const App: React.FC = () => {
   const { currentProperty, refreshKey, activeTab } = useApp();
@@ -26,6 +27,7 @@ export const App: React.FC = () => {
   const [isImportCSVOpen, setIsImportCSVOpen] = useState(false);
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [isTariffModalOpen, setIsTariffModalOpen] = useState(false);
+  const [isImportBackupOpen, setIsImportBackupOpen] = useState(false);
 
   // Analytics data state
   const [kpis, setKpis] = useState<KPISummary | null>(null);
@@ -79,6 +81,7 @@ export const App: React.FC = () => {
         onOpenImportCSV={() => setIsImportCSVOpen(true)}
         onOpenPropertyModal={() => setIsPropertyModalOpen(true)}
         onOpenTariffModal={() => setIsTariffModalOpen(true)}
+        onOpenImportBackup={() => setIsImportBackupOpen(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -138,6 +141,11 @@ export const App: React.FC = () => {
       <TariffModal
         isOpen={isTariffModalOpen}
         onClose={() => setIsTariffModalOpen(false)}
+      />
+
+      <ImportBackupModal
+        isOpen={isImportBackupOpen}
+        onClose={() => setIsImportBackupOpen(false)}
       />
     </div>
   );

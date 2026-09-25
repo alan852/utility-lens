@@ -26,6 +26,7 @@ export const CSVImporterModal: React.FC<CSVImporterModalProps> = ({ isOpen, onCl
     default_utility_type: 'ELECTRICITY',
     usage_col: '',
     cost_col: '',
+    standing_charge_col: '',
     notes_col: '',
     gas_unit_type: 'KWH',
   });
@@ -55,6 +56,7 @@ export const CSVImporterModal: React.FC<CSVImporterModalProps> = ({ isOpen, onCl
         default_utility_type: 'ELECTRICITY',
         usage_col: s.usage_col || '',
         cost_col: s.cost_col || '',
+        standing_charge_col: s.standing_charge_col || '',
         notes_col: s.notes_col || '',
         gas_unit_type: 'KWH',
       });
@@ -294,6 +296,23 @@ export const CSVImporterModal: React.FC<CSVImporterModalProps> = ({ isOpen, onCl
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2"
                   >
                     <option value="">(Auto-calculate from active tariff)</option>
+                    {preview.detected_headers.map((h) => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Standing Charge Col */}
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Standing Charge Column (Optional)
+                  </label>
+                  <select
+                    value={mapping.standing_charge_col || ''}
+                    onChange={(e) => setMapping({ ...mapping, standing_charge_col: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2"
+                  >
+                    <option value="">(Optional: auto-derive from tariff or total)</option>
                     {preview.detected_headers.map((h) => (
                       <option key={h} value={h}>{h}</option>
                     ))}

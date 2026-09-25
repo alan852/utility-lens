@@ -14,6 +14,7 @@ import {
   Moon, 
   Database, 
   Download, 
+  FileUp,
   Building
 } from 'lucide-react';
 
@@ -23,6 +24,7 @@ interface NavbarProps {
   onOpenImportCSV: () => void;
   onOpenPropertyModal: () => void;
   onOpenTariffModal: () => void;
+  onOpenImportBackup: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -30,7 +32,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddReading,
   onOpenImportCSV,
   onOpenPropertyModal,
-  onOpenTariffModal
+  onOpenTariffModal,
+  onOpenImportBackup
 }) => {
   const { 
     properties, 
@@ -160,6 +163,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Download className="w-4 h-4" />
             </a>
+
+            {/* Backup import */}
+            <button
+              onClick={onOpenImportBackup}
+              title="Import JSON Backup"
+              className="p-2 text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            >
+              <FileUp className="w-4 h-4" />
+            </button>
 
             {/* Theme Toggle */}
             <button

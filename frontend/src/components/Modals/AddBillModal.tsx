@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
-import { UtilityType } from '../../types';
-import { Plus, X, Zap, Flame, Droplets, AlertCircle } from 'lucide-react';
+import { UtilityType, TariffPlan } from '../../types';
+import { Plus, X, Zap, Flame, Droplets, AlertCircle, Calculator } from 'lucide-react';
 
 interface AddBillModalProps {
   isOpen: boolean;
@@ -23,14 +23,67 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({ isOpen, onClose }) =
   });
   const [totalUnits, setTotalUnits] = useState<string>('');
   const [gasUnitType, setGasUnitType] = useState<'KWH' | 'M3'>('KWH');
+  const [usageCost, setUsageCost] = useState<string>('');
+  const [standingChargeCost, setStandingChargeCost] = useState<string>('');
   const [totalCost, setTotalCost] = useState<string>('');
+  const [tariffs, setTariffs] = useState<TariffPlan[]>([]);
   const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen && currentProperty) {
+      api.getTariffs(currentProperty.id).then(setTariffs).catch(console.error);
+    }
+  }, [isOpen, currentProperty]);
+
   if (!isOpen) return null;
 
   const curr = currentProperty?.currency_symbol || '£';
+  const activeTariff = tariffs.find((t) => t.utility_type === utilityType && t.is_active);
+
+  const handleAutoFillFromTariff = () => {
+    if (!activeTariff) return;
+    const start = new Date(periodStart).getTime();
+    const end = new Date(periodEnd).getTime();
+    const days = Math.max(1, Math.round((end - start) / (1000 * 3600 * 24)));
+    const vatMult = 1.0 + (activeTariff.vat_rate || 0.05);
+
+    const scVal = Math.round(days * activeTariff.standing_charge * vatMult * 100) / 100;
+    const units = parseFloat(totalUnits) || 0;
+    const urVal = Math.round(units * activeTariff.unit_rate * vatMult * 100) / 100;
+
+    setStandingChargeCost(scVal.toFixed(2));
+    setUsageCost(urVal.toFixed(2));
+    setTotalCost((scVal + urVal).toFixed(2));
+  };
+
+  const handleUsageCostChange = (val: string) => {
+    setUsageCost(val);
+    const u = parseFloat(val) || 0;
+    const s = parseFloat(standingChargeCost) || 0;
+    if (val !== '' || standingChargeCost !== '') {
+      setTotalCost((u + s).toFixed(2));
+    }
+  };
+
+  const handleStandingChargeChange = (val: string) => {
+    setStandingChargeCost(val);
+    const u = parseFloat(usageCost) || 0;
+    const s = parseFloat(val) || 0;
+    if (val !== '' || usageCost !== '') {
+      setTotalCost((u + s).toFixed(2));
+    }
+  };
+
+  const handleTotalCostChange = (val: string) => {
+    setTotalCost(val);
+    if (val !== '' && standingChargeCost !== '') {
+      const tot = parseFloat(val) || 0;
+      const s = parseFloat(standingChargeCost) || 0;
+      setUsageCost(Math.max(0, tot - s).toFixed(2));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +98,12 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({ isOpen, onClose }) =
 
     try {
       const unitsNum = parseFloat(totalUnits);
-      const costNum = totalCost ? parseFloat(totalCost) : 0.0;
+      const scNum = standingChargeCost !== '' ? parseFloat(standingChargeCost) : undefined;
+      const urNum = usageCost !== '' ? parseFloat(usageCost) : undefined;
+      let costNum = totalCost !== '' ? parseFloat(totalCost) : 0.0;
+      if (costNum === 0 && scNum !== undefined && urNum !== undefined) {
+        costNum = Math.round((scNum + urNum) * 100) / 100;
+      }
 
       await api.createBill({
         property_id: currentProperty.id,
@@ -56,6 +114,8 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({ isOpen, onClose }) =
         raw_meter_units: utilityType === 'GAS' && gasUnitType === 'M3' ? unitsNum : undefined,
         raw_unit_type: utilityType === 'GAS' && gasUnitType === 'M3' ? 'M3' : undefined,
         total_cost: costNum,
+        standing_charge_cost: scNum,
+        unit_rate_cost: urNum,
         notes: notes.trim() || undefined,
         source: 'MANUAL',
       });
@@ -221,26 +281,87 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({ isOpen, onClose }) =
             )}
           </div>
 
-          {/* Billed Cost (£) */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
-                Total Billed Amount ({curr})
-              </label>
-              <span className="text-[11px] text-slate-400">
-                Optional: leave blank to auto-calculate from active tariff
-              </span>
+          {/* Cost Breakdown (Separating UK Standing Charge) */}
+          <div className="space-y-2.5 pt-1">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Cost Breakdown
+                </label>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Separate usage consumption from UK daily standing charge
+                </p>
+              </div>
+              {activeTariff && (
+                <button
+                  type="button"
+                  onClick={handleAutoFillFromTariff}
+                  className="flex items-center space-x-1 text-[11px] font-medium text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 bg-sky-50 dark:bg-sky-950/50 hover:bg-sky-100 dark:hover:bg-sky-900/60 px-2 py-1 rounded-md border border-sky-200 dark:border-sky-800 transition"
+                  title="Auto-calculate standing charge and unit rate from active tariff plan"
+                >
+                  <Calculator className="w-3 h-3" />
+                  <span>Auto-fill from Tariff</span>
+                </button>
+              )}
             </div>
-            <div className="relative">
-              <span className="absolute left-3 top-2.5 text-xs font-medium text-slate-400">{curr}</span>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={totalCost}
-                onChange={(e) => setTotalCost(e.target.value)}
-                className="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 pl-8"
-              />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                  Usage / Unit Cost ({curr})
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-xs font-medium text-slate-400">{curr}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={usageCost}
+                    onChange={(e) => handleUsageCostChange(e.target.value)}
+                    className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 pl-7 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-sky-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">
+                  Standing Charge ({curr})
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-xs font-medium text-slate-400">{curr}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={standingChargeCost}
+                    onChange={(e) => handleStandingChargeChange(e.target.value)}
+                    className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 pl-7 text-amber-700 dark:text-amber-400 focus:ring-1 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Total Billed Cost */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Total Billed Amount ({curr})
+                </label>
+                <span className="text-[10px] text-slate-400">
+                  {usageCost && standingChargeCost ? 'Sum of usage + standing charge' : 'Leave blank to auto-calculate from tariff'}
+                </span>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">{curr}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={totalCost}
+                  onChange={(e) => handleTotalCostChange(e.target.value)}
+                  className="w-full text-sm font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 pl-8 text-slate-900 dark:text-white focus:ring-1 focus:ring-sky-500"
+                />
+              </div>
             </div>
           </div>
 

@@ -41,13 +41,13 @@ export const BillTable: React.FC = () => {
   const curr = currentProperty?.currency_symbol || '£';
 
   return (
-    <div className="bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
       {/* Table Toolbar */}
       <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Historical Bill Records</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {bills.length} statements recorded for {currentProperty?.name}
+            {bills.length} statements recorded for {currentProperty?.name} • Standing charge separated for UK billing
           </p>
         </div>
 
@@ -57,7 +57,7 @@ export const BillTable: React.FC = () => {
           <select
             value={filterUtil}
             onChange={(e) => setFilterUtil(e.target.value)}
-            className="bg-slate-100 dark:bg-slate-700 text-xs rounded-lg px-2.5 py-1.5 border border-slate-200 dark:border-slate-600 focus:outline-none"
+            className="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-2.5 py-1.5 border border-slate-200 dark:border-slate-600 focus:outline-none"
           >
             <option value="">All Utilities</option>
             <option value="ELECTRICITY">Electricity Only</option>
@@ -67,29 +67,31 @@ export const BillTable: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">
+      {/* Table with Sticky Header and Scrollable Container */}
+      <div className="overflow-x-auto max-h-[calc(100vh-14rem)] min-h-[360px] overflow-y-auto">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px] border-b border-slate-200 dark:border-slate-700/80 shadow-sm backdrop-blur">
             <tr>
-              <th className="py-3 px-4 font-semibold">Utility</th>
-              <th className="py-3 px-4 font-semibold">Billing Period</th>
-              <th className="py-3 px-4 font-semibold">Consumption</th>
-              <th className="py-3 px-4 font-semibold">Billed Cost</th>
-              <th className="py-3 px-4 font-semibold">Daily Average</th>
-              <th className="py-3 px-4 font-semibold">Source</th>
-              <th className="py-3 px-4 font-semibold">Notes</th>
-              <th className="py-3 px-4 font-semibold text-right">Actions</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Utility</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Billing Period</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Consumption</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Usage Cost</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold text-amber-600 dark:text-amber-400">Standing Charge</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Total Cost</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Daily Average</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Source</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Notes</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
             {loading ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-slate-400">Loading records...</td>
+                <td colSpan={10} className="py-8 text-center text-slate-400">Loading records...</td>
               </tr>
             ) : bills.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-slate-400">No bill records found. Use "Add Bill" or "Import CSV" to add data.</td>
+                <td colSpan={10} className="py-8 text-center text-slate-400">No bill records found. Use "Add Bill" or "Import CSV" to add data.</td>
               </tr>
             ) : (
               bills.map((b) => {
@@ -98,8 +100,13 @@ export const BillTable: React.FC = () => {
                 const days = Math.max(1, Math.round((new Date(b.period_end).getTime() - new Date(b.period_start).getTime()) / (1000 * 3600 * 24)));
                 const dailyCost = (b.total_cost / days).toFixed(2);
 
+                const hasStanding = b.standing_charge_cost != null;
+                const standingCharge = b.standing_charge_cost ?? 0;
+                const usageCost = b.unit_rate_cost != null ? b.unit_rate_cost : (hasStanding ? Math.max(0, b.total_cost - standingCharge) : b.total_cost);
+                const standingPct = b.total_cost > 0 && hasStanding ? Math.round((standingCharge / b.total_cost) * 100) : 0;
+
                 return (
-                  <tr key={b.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-750 transition">
+                  <tr key={b.id} className="hover:bg-slate-100/70 dark:hover:bg-slate-750 transition-colors">
                     <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex items-center space-x-1.5 font-bold">
                         {isElec ? (
@@ -114,7 +121,7 @@ export const BillTable: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-4 whitespace-nowrap text-slate-600 dark:text-slate-300">
-                      {b.period_start} → {b.period_end} <span className="text-slate-400">({days}d)</span>
+                      {b.period_start} → {b.period_end} <span className="text-slate-400 dark:text-slate-400">({days}d)</span>
                     </td>
 
                     <td className="py-3 px-4 whitespace-nowrap font-medium text-slate-900 dark:text-white">
@@ -126,6 +133,30 @@ export const BillTable: React.FC = () => {
                       )}
                     </td>
 
+                    {/* Usage Cost */}
+                    <td className="py-3 px-4 whitespace-nowrap font-medium text-slate-800 dark:text-slate-200">
+                      {curr}{usageCost.toFixed(2)}
+                    </td>
+
+                    {/* Standing Charge */}
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      {hasStanding ? (
+                        <div>
+                          <span className="font-semibold text-amber-600 dark:text-amber-400">
+                            {curr}{standingCharge.toFixed(2)}
+                          </span>
+                          {standingPct > 0 && (
+                            <span className="text-[10px] text-slate-400 dark:text-slate-400 block font-normal">
+                              {standingPct}% of total
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-400">-</span>
+                      )}
+                    </td>
+
+                    {/* Total Cost */}
                     <td className="py-3 px-4 whitespace-nowrap font-bold text-slate-900 dark:text-white">
                       {curr}{b.total_cost.toFixed(2)}
                     </td>
@@ -153,7 +184,7 @@ export const BillTable: React.FC = () => {
                     <td className="py-3 px-4 whitespace-nowrap text-right">
                       <button
                         onClick={() => handleDelete(b.id)}
-                        className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition"
                         title="Delete bill"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

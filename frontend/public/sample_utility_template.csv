@@ -1,10 +1,10 @@
-Period Start,Period End,Utility Type,Consumption,Total Cost (£),Notes
-2025-01-01,2025-01-31,ELECTRICITY,320.5,89.40,Monthly bill
-2025-01-01,2025-01-31,GAS,1850.0,131.25,Winter gas usage
-2025-01-01,2025-01-31,WATER,9.5,29.11,Standard water bill
-2025-02-01,2025-02-28,ELECTRICITY,295.0,82.50,Monthly bill
-2025-02-01,2025-02-28,GAS,1620.0,116.10,Winter gas usage
-2025-02-01,2025-02-28,WATER,8.9,27.42,Standard water bill
-2025-03-01,2025-03-31,ELECTRICITY,280.0,78.20,Spring transition
-2025-03-01,2025-03-31,GAS,1250.0,91.20,Spring heating reduction
-2025-03-01,2025-03-31,WATER,9.1,28.00,Standard water bill
+Period Start,Period End,Utility Type,Consumption,Standing Charge (£),Total Cost (£),Notes
+2025-01-01,2025-01-31,ELECTRICITY,320.5,17.90,89.40,Monthly bill
+2025-01-01,2025-01-31,GAS,1850.0,10.09,131.25,Winter gas usage
+2025-01-01,2025-01-31,WATER,9.5,8.68,29.11,Standard water bill
+2025-02-01,2025-02-28,ELECTRICITY,295.0,16.16,82.50,Monthly bill
+2025-02-01,2025-02-28,GAS,1620.0,9.11,116.10,Winter gas usage
+2025-02-01,2025-02-28,WATER,8.9,7.84,27.42,Standard water bill
+2025-03-01,2025-03-31,ELECTRICITY,280.0,17.90,78.20,Spring transition
+2025-03-01,2025-03-31,GAS,1250.0,10.09,91.20,Spring heating reduction
+2025-03-01,2025-03-31,WATER,9.1,8.68,28.00,Standard water bill

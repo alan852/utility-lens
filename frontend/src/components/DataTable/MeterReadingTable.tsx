@@ -46,19 +46,19 @@ export const MeterReadingTable: React.FC = () => {
         </p>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">
+      <div className="overflow-x-auto max-h-[calc(100vh-14rem)] min-h-[360px] overflow-y-auto">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px] border-b border-slate-200 dark:border-slate-700/80 shadow-sm backdrop-blur">
             <tr>
-              <th className="py-3 px-4 font-semibold">Utility</th>
-              <th className="py-3 px-4 font-semibold">Reading Date</th>
-              <th className="py-3 px-4 font-semibold">Meter Register Index</th>
-              <th className="py-3 px-4 font-semibold">Source Type</th>
-              <th className="py-3 px-4 font-semibold">Notes</th>
-              <th className="py-3 px-4 font-semibold text-right">Actions</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Utility</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Reading Date</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Meter Register Index</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Source Type</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Notes</th>
+              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
             {loading ? (
               <tr>
                 <td colSpan={6} className="py-8 text-center text-slate-400">Loading readings...</td>
@@ -71,7 +71,7 @@ export const MeterReadingTable: React.FC = () => {
               readings.map((r) => {
                 const isElec = r.utility_type === 'ELECTRICITY';
                 return (
-                  <tr key={r.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-750 transition">
+                  <tr key={r.id} className="hover:bg-slate-100/70 dark:hover:bg-slate-750 transition-colors">
                     <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex items-center space-x-1.5 font-bold">
                         {isElec ? (
@@ -104,7 +104,7 @@ export const MeterReadingTable: React.FC = () => {
                     <td className="py-3 px-4 whitespace-nowrap text-right">
                       <button
                         onClick={() => handleDelete(r.id)}
-                        className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition"
                         title="Delete reading"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

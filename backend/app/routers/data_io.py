@@ -2,7 +2,7 @@ import io
 import csv
 from datetime import datetime, date
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response, Query, status
 from sqlalchemy.orm import Session
 from dateutil import parser as date_parser
 from ..database import get_db
@@ -18,6 +18,7 @@ def auto_detect_headers(headers: List[str]) -> Dict[str, Optional[str]]:
         "utility_type_col": None,
         "usage_col": None,
         "cost_col": None,
+        "standing_charge_col": None,
         "notes_col": None,
     }
     
@@ -52,10 +53,17 @@ def auto_detect_headers(headers: List[str]) -> Dict[str, Optional[str]]:
                 mapping["usage_col"] = lower_map[k]
                 break
 
-    # Cost column
-    for candidate in ["cost", "amount", "total", "charge", "price", "spend", "bill"]:
+    # Standing charge column
+    for candidate in ["standing charge", "standing_charge", "daily charge", "standing", "fixed charge", "daily fee", "standing fee", "standing cost"]:
         for k in lower_map:
-            if candidate in k and lower_map[k] != mapping["usage_col"] and not mapping["cost_col"]:
+            if candidate in k and not mapping["standing_charge_col"]:
+                mapping["standing_charge_col"] = lower_map[k]
+                break
+
+    # Cost column
+    for candidate in ["total cost", "total amount", "cost", "amount", "total", "charge", "price", "spend", "bill"]:
+        for k in lower_map:
+            if candidate in k and lower_map[k] != mapping["usage_col"] and lower_map[k] != mapping["standing_charge_col"] and not mapping["cost_col"]:
                 mapping["cost_col"] = lower_map[k]
                 break
 
@@ -151,6 +159,17 @@ def commit_csv(
                 c_str = row[m.cost_col].replace(",", "").replace("£", "").replace("$", "").strip()
                 raw_cost = float(c_str) if c_str else 0.0
 
+            raw_standing = 0.0
+            has_standing = False
+            if m.standing_charge_col and row.get(m.standing_charge_col):
+                sc_str = row[m.standing_charge_col].replace(",", "").replace("£", "").replace("$", "").strip()
+                if sc_str:
+                    try:
+                        raw_standing = float(sc_str)
+                        has_standing = True
+                    except ValueError:
+                        pass
+
             raw_meter_units = None
             raw_unit_type = None
 
@@ -160,13 +179,32 @@ def commit_csv(
                 raw_unit_type = "M3"
                 total_units = round(raw_meter_units * 1.02264 * 40.0 / 3.6, 2)
 
+            standing_charge_cost = raw_standing if has_standing else None
+            unit_rate_cost = None
+
             # Auto calculate cost from tariff if not provided
             if raw_cost == 0.0:
                 tariff = crud.get_active_tariff(db, req.property_id, util, parsed_start)
                 if tariff:
                     days = max(1, (parsed_end - parsed_start).days)
                     vat_mult = 1.0 + tariff.vat_rate
-                    raw_cost = round((total_units * tariff.unit_rate * vat_mult) + (days * tariff.standing_charge * vat_mult), 2)
+                    calc_unit_cost = round(total_units * tariff.unit_rate * vat_mult, 2)
+                    calc_sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
+                    raw_cost = round(calc_unit_cost + calc_sc_cost, 2)
+                    standing_charge_cost = calc_sc_cost
+                    unit_rate_cost = calc_unit_cost
+            else:
+                if has_standing:
+                    unit_rate_cost = round(max(0.0, raw_cost - raw_standing), 2)
+                else:
+                    tariff = crud.get_active_tariff(db, req.property_id, util, parsed_start)
+                    if tariff and tariff.standing_charge > 0:
+                        days = max(1, (parsed_end - parsed_start).days)
+                        vat_mult = 1.0 + tariff.vat_rate
+                        calc_sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
+                        if raw_cost >= calc_sc_cost:
+                            standing_charge_cost = calc_sc_cost
+                            unit_rate_cost = round(raw_cost - calc_sc_cost, 2)
 
             notes = row.get(m.notes_col) if m.notes_col else "Imported from CSV"
 
@@ -180,6 +218,8 @@ def commit_csv(
                 raw_meter_units=raw_meter_units,
                 raw_unit_type=raw_unit_type,
                 total_cost=raw_cost,
+                standing_charge_cost=standing_charge_cost,
+                unit_rate_cost=unit_rate_cost,
                 source="CSV_IMPORT",
                 notes=notes
             )
@@ -203,13 +243,13 @@ def commit_csv(
 def download_sample_csv():
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Period Start", "Period End", "Utility Type", "Consumption", "Total Cost (£)", "Notes"])
-    writer.writerow(["2025-01-01", "2025-01-31", "ELECTRICITY", "320.5", "89.40", "Monthly bill"])
-    writer.writerow(["2025-01-01", "2025-01-31", "GAS", "1850.0", "131.25", "Winter gas usage"])
-    writer.writerow(["2025-01-01", "2025-01-31", "WATER", "9.5", "29.11", "Standard water bill"])
-    writer.writerow(["2025-02-01", "2025-02-28", "ELECTRICITY", "295.0", "82.50", "Monthly bill"])
-    writer.writerow(["2025-02-01", "2025-02-28", "GAS", "1620.0", "116.10", "Winter gas usage"])
-    writer.writerow(["2025-02-01", "2025-02-28", "WATER", "8.9", "27.42", "Standard water bill"])
+    writer.writerow(["Period Start", "Period End", "Utility Type", "Consumption", "Standing Charge (£)", "Total Cost (£)", "Notes"])
+    writer.writerow(["2025-01-01", "2025-01-31", "ELECTRICITY", "320.5", "17.90", "89.40", "Monthly bill"])
+    writer.writerow(["2025-01-01", "2025-01-31", "GAS", "1850.0", "10.09", "131.25", "Winter gas usage"])
+    writer.writerow(["2025-01-01", "2025-01-31", "WATER", "9.5", "8.68", "29.11", "Standard water bill"])
+    writer.writerow(["2025-02-01", "2025-02-28", "ELECTRICITY", "295.0", "16.16", "82.50", "Monthly bill"])
+    writer.writerow(["2025-02-01", "2025-02-28", "GAS", "1620.0", "9.11", "116.10", "Winter gas usage"])
+    writer.writerow(["2025-02-01", "2025-02-28", "WATER", "8.9", "7.84", "27.42", "Standard water bill"])
     
     csv_bytes = output.getvalue().encode("utf-8")
     return Response(
@@ -254,6 +294,8 @@ def export_backup(db: Session = Depends(get_db)):
                     "raw_meter_units": b.raw_meter_units,
                     "raw_unit_type": b.raw_unit_type,
                     "total_cost": b.total_cost,
+                    "standing_charge_cost": b.standing_charge_cost,
+                    "unit_rate_cost": b.unit_rate_cost,
                     "notes": b.notes,
                     "source": b.source
                 }
@@ -274,3 +316,161 @@ def export_backup(db: Session = Depends(get_db)):
         data.append(prop_data)
 
     return {"version": 1, "exported_at": str(datetime.utcnow()), "properties": data}
+
+@router.post("/import-backup", response_model=schemas.BackupImportResult)
+async def import_backup(
+    file: UploadFile = File(...),
+    mode: str = Query("merge", pattern="^(merge|replace)$"),
+    db: Session = Depends(get_db)
+):
+    import json
+    content_bytes = await file.read()
+    try:
+        data = json.loads(content_bytes.decode("utf-8"))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON file: {str(e)}")
+
+    if not isinstance(data, dict) or "properties" not in data:
+        raise HTTPException(status_code=400, detail="Invalid backup file format: missing 'properties' key")
+
+    prop_list = data.get("properties", [])
+    if not isinstance(prop_list, list):
+        raise HTTPException(status_code=400, detail="Invalid properties format in backup file")
+
+    if mode == "replace":
+        db.query(models.Property).delete()
+        db.commit()
+
+    props_count = 0
+    bills_count = 0
+    readings_count = 0
+    tariffs_count = 0
+
+    for prop_raw in prop_list:
+        p_name = prop_raw.get("name", "Home")
+        p_addr = prop_raw.get("address")
+        p_curr = prop_raw.get("currency_symbol", "£")
+
+        existing_prop = None
+        if mode == "merge":
+            existing_prop = db.query(models.Property).filter(models.Property.name == p_name).first()
+
+        if existing_prop:
+            prop = existing_prop
+        else:
+            prop = models.Property(name=p_name, address=p_addr, currency_symbol=p_curr)
+            db.add(prop)
+            db.flush()
+            props_count += 1
+
+        # Tariffs
+        existing_tariffs = db.query(models.TariffPlan).filter(models.TariffPlan.property_id == prop.id).all()
+        existing_tariff_keys = {
+            (t.utility_type, t.name, str(t.valid_from)) for t in existing_tariffs
+        }
+        for t_raw in prop_raw.get("tariffs", []):
+            try:
+                t_util = t_raw["utility_type"].upper()
+                t_name = t_raw.get("name", "Tariff")
+                t_vfrom = date_parser.parse(str(t_raw["valid_from"])).date()
+                key = (t_util, t_name, str(t_vfrom))
+                if key in existing_tariff_keys:
+                    continue
+                t_vto = date_parser.parse(str(t_raw["valid_to"])).date() if t_raw.get("valid_to") else None
+                db_t = models.TariffPlan(
+                    property_id=prop.id,
+                    utility_type=t_util,
+                    name=t_name,
+                    valid_from=t_vfrom,
+                    valid_to=t_vto,
+                    unit_rate=float(t_raw.get("unit_rate", 0.0)),
+                    standing_charge=float(t_raw.get("standing_charge", 0.0)),
+                    vat_rate=float(t_raw.get("vat_rate", 0.05)),
+                    is_active=bool(t_raw.get("is_active", True))
+                )
+                db.add(db_t)
+                existing_tariff_keys.add(key)
+                tariffs_count += 1
+            except Exception:
+                continue
+
+        # Bills
+        existing_bills = db.query(models.BillRecord).filter(models.BillRecord.property_id == prop.id).all()
+        existing_bill_keys = {
+            (b.utility_type, str(b.period_start), str(b.period_end)) for b in existing_bills
+        }
+        for b_raw in prop_raw.get("bills", []):
+            try:
+                b_util = b_raw["utility_type"].upper()
+                b_start = date_parser.parse(str(b_raw["period_start"])).date()
+                b_end = date_parser.parse(str(b_raw["period_end"])).date()
+                key = (b_util, str(b_start), str(b_end))
+                if key in existing_bill_keys:
+                    continue
+                
+                sc_cost = float(b_raw["standing_charge_cost"]) if b_raw.get("standing_charge_cost") is not None else None
+                ur_cost = float(b_raw["unit_rate_cost"]) if b_raw.get("unit_rate_cost") is not None else None
+                tot_cost = float(b_raw.get("total_cost", 0.0))
+
+                if sc_cost is not None and ur_cost is None:
+                    ur_cost = round(max(0.0, tot_cost - sc_cost), 2)
+                elif ur_cost is not None and sc_cost is None:
+                    sc_cost = round(max(0.0, tot_cost - ur_cost), 2)
+
+                db_b = models.BillRecord(
+                    property_id=prop.id,
+                    utility_type=b_util,
+                    period_start=b_start,
+                    period_end=b_end,
+                    total_units=float(b_raw.get("total_units", 0.0)),
+                    raw_meter_units=float(b_raw["raw_meter_units"]) if b_raw.get("raw_meter_units") is not None else None,
+                    raw_unit_type=b_raw.get("raw_unit_type"),
+                    total_cost=tot_cost,
+                    standing_charge_cost=sc_cost,
+                    unit_rate_cost=ur_cost,
+                    notes=b_raw.get("notes"),
+                    source=b_raw.get("source", "JSON_IMPORT")
+                )
+                db.add(db_b)
+                existing_bill_keys.add(key)
+                bills_count += 1
+            except Exception:
+                continue
+
+        # Meter Readings
+        existing_reads = db.query(models.MeterReading).filter(models.MeterReading.property_id == prop.id).all()
+        existing_read_keys = {
+            (m.utility_type, str(m.reading_date)) for m in existing_reads
+        }
+        for m_raw in prop_raw.get("meter_readings", []):
+            try:
+                m_util = m_raw["utility_type"].upper()
+                m_date = date_parser.parse(str(m_raw["reading_date"])).date()
+                key = (m_util, str(m_date))
+                if key in existing_read_keys:
+                    continue
+                db_m = models.MeterReading(
+                    property_id=prop.id,
+                    utility_type=m_util,
+                    reading_date=m_date,
+                    meter_index=float(m_raw.get("meter_index", 0.0)),
+                    meter_unit=m_raw.get("meter_unit", "KWH"),
+                    reading_type=m_raw.get("reading_type", "ACTUAL"),
+                    notes=m_raw.get("notes")
+                )
+                db.add(db_m)
+                existing_read_keys.add(key)
+                readings_count += 1
+            except Exception:
+                continue
+
+    db.commit()
+
+    return schemas.BackupImportResult(
+        success=True,
+        message=f"Backup restored successfully in {mode} mode",
+        properties_count=props_count if mode == "replace" or props_count > 0 else len(prop_list),
+        bills_count=bills_count,
+        readings_count=readings_count,
+        tariffs_count=tariffs_count
+    )

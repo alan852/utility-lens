@@ -22,18 +22,20 @@ Built with a **React 18 + Tailwind CSS + Recharts** frontend, a **Python FastAPI
    - Simulates your actual 12-month historical consumption against new rates and computes net savings (£ and %).
 
 4. **Smart CSV Ingestion & Manual Entry**:
-   - **Smart CSV Importer**: Auto-detects columns (`Date`, `Usage`, `Cost`, `Utility`), provides a visual column-mapping interface, and previews rows before commit.
+   - **Smart CSV Importer**: Auto-detects columns (`Date`, `Usage`, `Cost`, `Standing Charge`, `Utility`), provides a visual column-mapping interface, and previews rows before commit.
+   - **UK Standing Charge Support**: Separates daily standing charge from usage/consumption costs across manual logging, tables, CSV import, and tariff simulations.
    - **Gas Meter Support**: Direct entry in $m^3$ with automatic conversion to standard UK calorific kWh ($m^3 \times 1.02264 \times 40.0 / 3.6$).
    - **Downloadable Sample CSV**: Template available with one click directly from the UI.
-   - **Manual Loggers**: Quick modal forms for recording monthly statements or cumulative meter readings.
+   - **Manual Loggers**: Quick modal forms for recording monthly statements with auto-calculation from active tariffs.
 
 5. **Multi-Property & Frictionless Local Mode**:
    - No login or passwords required for local use.
    - Switch between multiple residences (e.g. *Main Home*, *Rental Property*, *Holiday Cottage*) from the navigation bar.
 
-6. **1-Click Demo Data & Backup**:
+6. **1-Click Demo Data & Backup Import/Export**:
    - Pre-loaded with a 1-click realistic UK 18-month historical dataset for instant testing.
    - Single-click full JSON backup export.
+   - Seamless JSON backup import and restore with Merge and Replace options.
 
 ---
 

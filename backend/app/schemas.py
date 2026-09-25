@@ -210,6 +210,7 @@ class ColumnMapping(BaseModel):
     default_utility_type: Optional[str] = None  # If CSV is single utility
     usage_col: str
     cost_col: Optional[str] = None
+    standing_charge_col: Optional[str] = None
     end_date_col: Optional[str] = None
     notes_col: Optional[str] = None
     gas_unit_type: Optional[str] = "KWH"  # "M3" or "KWH"
@@ -232,3 +233,12 @@ class CSVImportResult(BaseModel):
     skipped_count: int
     errors: List[str]
     message: str
+
+class BackupImportResult(BaseModel):
+    success: bool
+    message: str
+    properties_count: int
+    bills_count: int
+    readings_count: int
+    tariffs_count: int
+

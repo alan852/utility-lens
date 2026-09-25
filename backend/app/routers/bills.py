@@ -30,17 +30,34 @@ def create_bill(bill_in: schemas.BillRecordCreate, db: Session = Depends(get_db)
     if util == "GAS" and data.get("raw_unit_type") == "M3" and data.get("raw_meter_units"):
         data["total_units"] = convert_gas_m3_to_kwh(data["raw_meter_units"])
 
-    # If total_cost is 0 or None, try auto-calculating with active tariff
-    if not data.get("total_cost") or data["total_cost"] == 0:
+    days = max(1, (data["period_end"] - data["period_start"]).days)
+    sc = data.get("standing_charge_cost")
+    ur = data.get("unit_rate_cost")
+    tot = data.get("total_cost")
+
+    if sc is not None and ur is not None and (tot is None or tot == 0):
+        data["total_cost"] = round(sc + ur, 2)
+    elif sc is not None and (tot is not None and tot > 0) and ur is None:
+        data["unit_rate_cost"] = round(max(0.0, tot - sc), 2)
+    elif ur is not None and (tot is not None and tot > 0) and sc is None:
+        data["standing_charge_cost"] = round(max(0.0, tot - ur), 2)
+    elif not tot or tot == 0:
         tariff = crud.get_active_tariff(db, data["property_id"], util, data["period_start"])
         if tariff:
-            days = max(1, (data["period_end"] - data["period_start"]).days)
             vat_mult = 1.0 + tariff.vat_rate
             unit_cost = round(data["total_units"] * tariff.unit_rate * vat_mult, 2)
             sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
             data["standing_charge_cost"] = sc_cost
             data["unit_rate_cost"] = unit_cost
             data["total_cost"] = round(unit_cost + sc_cost, 2)
+    elif sc is None:
+        tariff = crud.get_active_tariff(db, data["property_id"], util, data["period_start"])
+        if tariff and tariff.standing_charge > 0:
+            vat_mult = 1.0 + tariff.vat_rate
+            sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
+            if data["total_cost"] >= sc_cost:
+                data["standing_charge_cost"] = sc_cost
+                data["unit_rate_cost"] = round(data["total_cost"] - sc_cost, 2)
 
     return crud.create_bill(db, schemas.BillRecordCreate(**data))
 
@@ -53,9 +70,18 @@ def read_bill(bill_id: str, db: Session = Depends(get_db)):
 
 @router.put("/{bill_id}", response_model=schemas.BillRecordResponse)
 def update_bill(bill_id: str, bill_in: schemas.BillRecordUpdate, db: Session = Depends(get_db)):
-    bill = crud.update_bill(db, bill_id, bill_in)
-    if not bill:
+    data = bill_in.model_dump(exclude_unset=True)
+    existing = crud.get_bill(db, bill_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="Bill record not found")
+    
+    # If standing charge or total was updated, adjust unit_rate_cost if needed
+    new_tot = data.get("total_cost", existing.total_cost)
+    new_sc = data.get("standing_charge_cost", existing.standing_charge_cost)
+    if "unit_rate_cost" not in data and new_sc is not None and new_tot is not None:
+        data["unit_rate_cost"] = round(max(0.0, new_tot - new_sc), 2)
+        
+    bill = crud.update_bill(db, bill_id, schemas.BillRecordUpdate(**data))
     return bill
 
 @router.delete("/{bill_id}", status_code=status.HTTP_204_NO_CONTENT)
