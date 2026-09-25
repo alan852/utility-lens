@@ -92,6 +92,29 @@ class BillRecordResponse(BillRecordBase):
     class Config:
         from_attributes = True
 
+class RecurringContractBillCreate(BaseModel):
+    property_id: str
+    utility_type: str = Field(..., example="BROADBAND")
+    contract_name: Optional[str] = Field(None, example="BT Full Fibre 300")
+    start_date: date
+    end_date: Optional[date] = None
+    duration_months: Optional[int] = Field(12, ge=1, le=120)
+    monthly_amount: float = Field(..., gt=0, example=35.99)
+    standing_charge_cost: Optional[float] = None
+    unit_rate_cost: Optional[float] = None
+    total_units: float = Field(0.0, ge=0)
+    notes: Optional[str] = None
+    create_tariff_plan: bool = True
+    skip_existing: bool = True
+
+class RecurringContractBillResponse(BaseModel):
+    success: bool
+    created_count: int
+    skipped_count: int
+    message: str
+    bills: List[BillRecordResponse]
+    tariff_plan: Optional[TariffPlanResponse] = None
+
 # Meter Reading Schemas
 class MeterReadingBase(BaseModel):
     property_id: str

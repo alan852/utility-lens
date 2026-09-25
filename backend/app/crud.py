@@ -1,5 +1,7 @@
-from typing import List, Optional
-from datetime import date
+from typing import List, Optional, Tuple
+from datetime import date, timedelta
+import calendar
+from dateutil.relativedelta import relativedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_
 from . import models, schemas
@@ -160,6 +162,142 @@ def delete_bill(db: Session, bill_id: str) -> bool:
     db.delete(db_bill)
     db.commit()
     return True
+
+def create_recurring_contract_bills(
+    db: Session, contract_in: schemas.RecurringContractBillCreate
+) -> Tuple[List[models.BillRecord], int, int, Optional[models.TariffPlan]]:
+    util = contract_in.utility_type.upper()
+    start_date = contract_in.start_date
+    end_date = contract_in.end_date
+    duration = contract_in.duration_months
+
+    if not duration and end_date:
+        duration = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
+        duration = max(1, duration)
+    elif not duration:
+        duration = 12
+
+    created_bills: List[models.BillRecord] = []
+    skipped_count = 0
+    created_count = 0
+    final_period_end = start_date
+
+    for i in range(duration):
+        m_start = start_date + relativedelta(months=i)
+        if start_date.day == 1:
+            last_day = calendar.monthrange(m_start.year, m_start.month)[1]
+            m_end = date(m_start.year, m_start.month, last_day)
+        else:
+            m_end = (start_date + relativedelta(months=i + 1)) - timedelta(days=1)
+
+        if end_date and m_end > end_date:
+            m_end = end_date
+
+        final_period_end = max(final_period_end, m_end)
+
+        existing_bill = db.query(models.BillRecord).filter(
+            models.BillRecord.property_id == contract_in.property_id,
+            models.BillRecord.utility_type == util,
+            models.BillRecord.period_start == m_start,
+            models.BillRecord.period_end == m_end,
+        ).first()
+
+        if existing_bill and contract_in.skip_existing:
+            skipped_count += 1
+            continue
+
+        # Determine cost breakout
+        if contract_in.standing_charge_cost is not None and contract_in.unit_rate_cost is not None:
+            sc_cost = contract_in.standing_charge_cost
+            ur_cost = contract_in.unit_rate_cost
+        elif util in ["COUNCIL_TAX", "BROADBAND", "ESTATE_SERVICE_CHARGE"]:
+            sc_cost = contract_in.monthly_amount
+            ur_cost = 0.0
+        else:
+            if contract_in.standing_charge_cost is not None:
+                sc_cost = contract_in.standing_charge_cost
+                ur_cost = round(max(0.0, contract_in.monthly_amount - sc_cost), 2)
+            elif contract_in.unit_rate_cost is not None:
+                ur_cost = contract_in.unit_rate_cost
+                sc_cost = round(max(0.0, contract_in.monthly_amount - ur_cost), 2)
+            else:
+                tariff = get_active_tariff(db, contract_in.property_id, util, m_start)
+                days = max(1, (m_end - m_start).days + 1)
+                if tariff and tariff.standing_charge > 0:
+                    vat_mult = 1.0 + (tariff.vat_rate or 0.0)
+                    sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
+                    if contract_in.monthly_amount >= sc_cost:
+                        ur_cost = round(contract_in.monthly_amount - sc_cost, 2)
+                    else:
+                        sc_cost = contract_in.monthly_amount
+                        ur_cost = 0.0
+                else:
+                    sc_cost = contract_in.monthly_amount
+                    ur_cost = 0.0
+
+        contract_title = contract_in.contract_name or f"{util.replace('_', ' ').title()} Contract"
+        month_label = f"Month {i+1} of {duration}"
+        bill_notes = f"{contract_title} ({month_label})"
+        if contract_in.notes:
+            bill_notes += f" - {contract_in.notes}"
+
+        if existing_bill:
+            existing_bill.total_cost = contract_in.monthly_amount
+            existing_bill.standing_charge_cost = sc_cost
+            existing_bill.unit_rate_cost = ur_cost
+            existing_bill.total_units = contract_in.total_units
+            existing_bill.source = "RECURRING_CONTRACT"
+            existing_bill.notes = bill_notes
+            created_bills.append(existing_bill)
+            created_count += 1
+        else:
+            new_bill = models.BillRecord(
+                property_id=contract_in.property_id,
+                utility_type=util,
+                period_start=m_start,
+                period_end=m_end,
+                total_units=contract_in.total_units,
+                total_cost=contract_in.monthly_amount,
+                standing_charge_cost=sc_cost,
+                unit_rate_cost=ur_cost,
+                notes=bill_notes,
+                source="RECURRING_CONTRACT",
+            )
+            db.add(new_bill)
+            created_bills.append(new_bill)
+            created_count += 1
+
+    tariff_plan = None
+    if contract_in.create_tariff_plan and created_count > 0:
+        vat = 0.0
+        if util == "BROADBAND":
+            vat = 0.20
+        elif util in ["ELECTRICITY", "GAS"]:
+            vat = 0.05
+
+        standing_daily = round(contract_in.monthly_amount / 30.4167, 2) if util in ["COUNCIL_TAX", "BROADBAND", "ESTATE_SERVICE_CHARGE"] else (round((contract_in.standing_charge_cost or 0.0) / 30.4167, 2))
+
+        tariff_name = contract_in.contract_name or f"{util.replace('_', ' ').title()} Fixed Contract"
+        tariff_plan = models.TariffPlan(
+            property_id=contract_in.property_id,
+            utility_type=util,
+            name=tariff_name,
+            valid_from=start_date,
+            valid_to=final_period_end,
+            unit_rate=None if util in ["COUNCIL_TAX", "BROADBAND", "ESTATE_SERVICE_CHARGE"] else 0.0,
+            standing_charge=standing_daily,
+            vat_rate=vat,
+            is_active=True,
+        )
+        db.add(tariff_plan)
+
+    db.commit()
+    for b in created_bills:
+        db.refresh(b)
+    if tariff_plan:
+        db.refresh(tariff_plan)
+
+    return created_bills, created_count, skipped_count, tariff_plan
 
 # Meter Readings
 def get_meter_readings_for_properties(

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { BillRecord } from '../../types';
-import { Trash2, Pencil, Zap, Flame, Droplets, Filter, Landmark, Wifi, ShieldCheck } from 'lucide-react';
+import { Trash2, Pencil, Zap, Flame, Droplets, Filter, Landmark, Wifi, ShieldCheck, Repeat } from 'lucide-react';
 import { EditBillModal } from '../Modals/EditBillModal';
+import { AddBillModal } from '../Modals/AddBillModal';
 
 export const BillTable: React.FC = () => {
   const { properties, selectedPropertyIds, isAllPropertiesSelected, refreshKey, triggerRefresh } = useApp();
@@ -11,6 +12,7 @@ export const BillTable: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [filterUtil, setFilterUtil] = useState<string>('');
   const [editingBill, setEditingBill] = useState<BillRecord | null>(null);
+  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState<boolean>(false);
 
   const loadBills = async () => {
     setLoading(true);
@@ -53,22 +55,33 @@ export const BillTable: React.FC = () => {
           </p>
         </div>
 
-        {/* Filter */}
+        {/* Filter & Actions */}
         <div className="flex items-center space-x-2">
-          <Filter className="w-3.5 h-3.5 text-slate-400" />
-          <select
-            value={filterUtil}
-            onChange={(e) => setFilterUtil(e.target.value)}
-            className="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-2.5 py-1.5 border border-slate-200 dark:border-slate-600 focus:outline-none"
+          <button
+            type="button"
+            onClick={() => setIsRecurringModalOpen(true)}
+            className="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:hover:bg-sky-900 dark:text-sky-300 border border-sky-200 dark:border-sky-800 transition"
           >
-            <option value="">All Utilities</option>
-            <option value="ELECTRICITY">Electricity Only</option>
-            <option value="GAS">Gas Only</option>
-            <option value="WATER">Water Only</option>
-            <option value="COUNCIL_TAX">Council Tax Only</option>
-            <option value="BROADBAND">Broadband Only</option>
-            <option value="ESTATE_SERVICE_CHARGE">Estate Service Charge Only</option>
-          </select>
+            <Repeat className="w-3.5 h-3.5 mr-1 text-sky-500" />
+            + Recurring Contract
+          </button>
+
+          <div className="flex items-center space-x-1.5 pl-1 border-l border-slate-200 dark:border-slate-700">
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <select
+              value={filterUtil}
+              onChange={(e) => setFilterUtil(e.target.value)}
+              className="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-lg px-2.5 py-1.5 border border-slate-200 dark:border-slate-600 focus:outline-none"
+            >
+              <option value="">All Utilities</option>
+              <option value="ELECTRICITY">Electricity Only</option>
+              <option value="GAS">Gas Only</option>
+              <option value="WATER">Water Only</option>
+              <option value="COUNCIL_TAX">Council Tax Only</option>
+              <option value="BROADBAND">Broadband Only</option>
+              <option value="ESTATE_SERVICE_CHARGE">Estate Service Charge Only</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -205,14 +218,23 @@ export const BillTable: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-4 whitespace-nowrap">
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        b.source === 'CSV_IMPORT'
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center ${
+                        b.source === 'RECURRING_CONTRACT'
+                          ? 'bg-sky-50 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 border border-sky-200 dark:border-sky-800'
+                          : b.source === 'CSV_IMPORT'
                           ? 'bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-300'
                           : b.source === 'SEED_DATA'
                           ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300'
                           : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                       }`}>
-                        {b.source}
+                        {b.source === 'RECURRING_CONTRACT' ? (
+                          <>
+                            <Repeat className="w-2.5 h-2.5 mr-1" />
+                            CONTRACT
+                          </>
+                        ) : (
+                          b.source
+                        )}
                       </span>
                     </td>
 
@@ -254,6 +276,12 @@ export const BillTable: React.FC = () => {
         bill={editingBill}
         isOpen={!!editingBill}
         onClose={() => setEditingBill(null)}
+      />
+
+      <AddBillModal
+        isOpen={isRecurringModalOpen}
+        initialMode="recurring"
+        onClose={() => setIsRecurringModalOpen(false)}
       />
     </div>
   );

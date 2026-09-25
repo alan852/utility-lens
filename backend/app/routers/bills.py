@@ -63,6 +63,26 @@ def create_bill(bill_in: schemas.BillRecordCreate, db: Session = Depends(get_db)
 
     return crud.create_bill(db, schemas.BillRecordCreate(**data))
 
+@router.post("/recurring", response_model=schemas.RecurringContractBillResponse, status_code=status.HTTP_201_CREATED)
+def create_recurring_bills(contract_in: schemas.RecurringContractBillCreate, db: Session = Depends(get_db)):
+    prop = crud.get_property(db, contract_in.property_id)
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    
+    bills, created_count, skipped_count, tariff = crud.create_recurring_contract_bills(db, contract_in)
+    msg = f"Successfully generated {created_count} contract bill(s)"
+    if skipped_count > 0:
+        msg += f" ({skipped_count} existing bill(s) skipped)"
+    
+    return schemas.RecurringContractBillResponse(
+        success=True,
+        created_count=created_count,
+        skipped_count=skipped_count,
+        message=msg,
+        bills=bills,
+        tariff_plan=tariff
+    )
+
 @router.get("/{bill_id}", response_model=schemas.BillRecordResponse)
 def read_bill(bill_id: str, db: Session = Depends(get_db)):
     bill = crud.get_bill(db, bill_id)

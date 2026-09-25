@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { TariffPlan, UtilityType } from '../../types';
-import { Calculator, X, Plus, Trash2, Pencil, Zap, Flame, Droplets, AlertCircle, Landmark, Wifi, ShieldCheck } from 'lucide-react';
+import { Calculator, X, Plus, Trash2, Pencil, Zap, Flame, Droplets, AlertCircle, Landmark, Wifi, ShieldCheck, Repeat } from 'lucide-react';
+import { AddBillModal } from './AddBillModal';
 
 interface TariffModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
   const [loading, setLoading] = useState<boolean>(false);
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [editingTariff, setEditingTariff] = useState<TariffPlan | null>(null);
+  const [recurringModalTarget, setRecurringModalTarget] = useState<UtilityType | null>(null);
 
   // Form state
   const [utilityType, setUtilityType] = useState<UtilityType>('ELECTRICITY');
@@ -212,6 +214,13 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
                   </div>
                   <div className="flex items-center space-x-1">
                     <button
+                      onClick={() => setRecurringModalTarget(t.utility_type)}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition"
+                      title="Generate recurring contract bills for this utility"
+                    >
+                      <Repeat className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => handleStartEdit(t)}
                       className="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-950/40 transition"
                       title="Edit tariff plan"
@@ -344,6 +353,15 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
           )}
         </div>
       </div>
+
+      {recurringModalTarget && (
+        <AddBillModal
+          isOpen={!!recurringModalTarget}
+          initialMode="recurring"
+          initialUtilityType={recurringModalTarget}
+          onClose={() => setRecurringModalTarget(null)}
+        />
+      )}
     </div>
   );
 };

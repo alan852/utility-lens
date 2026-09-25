@@ -39,6 +39,31 @@ export interface BillRecord {
   created_at: string;
 }
 
+export interface RecurringContractBillCreate {
+  property_id: string;
+  utility_type: UtilityType;
+  contract_name?: string;
+  start_date: string;
+  end_date?: string;
+  duration_months?: number;
+  monthly_amount: number;
+  standing_charge_cost?: number;
+  unit_rate_cost?: number;
+  total_units?: number;
+  notes?: string;
+  create_tariff_plan?: boolean;
+  skip_existing?: boolean;
+}
+
+export interface RecurringContractBillResponse {
+  success: boolean;
+  created_count: number;
+  skipped_count: number;
+  message: string;
+  bills: BillRecord[];
+  tariff_plan?: TariffPlan | null;
+}
+
 export interface MeterReading {
   id: string;
   property_id: string;

@@ -12,7 +12,9 @@ import {
   CSVPreviewResponse,
   CSVImportResult,
   ColumnMapping,
-  BackupImportResult
+  BackupImportResult,
+  RecurringContractBillCreate,
+  RecurringContractBillResponse
 } from '../types';
 
 const API_BASE = '/api';
@@ -106,6 +108,19 @@ export const api = {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to save bill');
+    return res.json();
+  },
+
+  async createRecurringContractBills(data: RecurringContractBillCreate): Promise<RecurringContractBillResponse> {
+    const res = await fetch(`${API_BASE}/bills/recurring`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to generate recurring contract bills' }));
+      throw new Error(err.detail || 'Failed to generate recurring contract bills');
+    }
     return res.json();
   },
 
