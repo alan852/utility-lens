@@ -373,6 +373,22 @@ def simulate_tariffs(db: Session, request: schemas.TariffSimulationRequest) -> s
 
     scenario_map = {s.utility_type.upper(): s for s in request.scenarios}
     
+    # Only simulate utilities explicitly provided in the scenarios (e.g. ELECTRICITY, GAS).
+    # Exclude fixed utilities and statutory services like Broadband, Council Tax, Water, and Estate Charges.
+    df = df[df["utility_type"].isin(scenario_map.keys())]
+
+    if df.empty:
+        return schemas.TariffSimulationResponse(
+            property_id=request.property_id,
+            months_analyzed=request.months_lookback,
+            total_historical_cost=0.0,
+            total_simulated_cost=0.0,
+            total_savings=0.0,
+            total_savings_pct=0.0,
+            currency_symbol=currency,
+            breakdown=[]
+        )
+
     total_historical = 0.0
     total_simulated = 0.0
     breakdown_items = []
@@ -383,16 +399,11 @@ def simulate_tariffs(db: Session, request: schemas.TariffSimulationRequest) -> s
         tot_days = int(group["days"].sum())
         total_historical += hist_cost
 
-        scenario = scenario_map.get(util_type)
-        if scenario:
-            vat_mult = 1.0 + scenario.vat_rate
-            unit_cost = hist_units * scenario.new_unit_rate * vat_mult
-            standing_cost = tot_days * scenario.new_standing_charge * vat_mult
-            sim_cost = round(unit_cost + standing_cost, 2)
-        else:
-            unit_cost = hist_cost * 0.7
-            standing_cost = hist_cost * 0.3
-            sim_cost = hist_cost
+        scenario = scenario_map[util_type]
+        vat_mult = 1.0 + scenario.vat_rate
+        unit_cost = hist_units * scenario.new_unit_rate * vat_mult
+        standing_cost = tot_days * scenario.new_standing_charge * vat_mult
+        sim_cost = round(unit_cost + standing_cost, 2)
 
         total_simulated += sim_cost
         diff = round(hist_cost - sim_cost, 2)

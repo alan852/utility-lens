@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { TariffSimulationResponse, TariffSimulationScenario } from '../../types';
-import { Calculator, TrendingDown, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
+import { Calculator, TrendingDown, TrendingUp, AlertCircle, RefreshCw, Zap, Flame } from 'lucide-react';
 
 export const TariffSimulator: React.FC = () => {
   const { currentProperty } = useApp();
@@ -61,7 +61,7 @@ export const TariffSimulator: React.FC = () => {
               "What-If" Tariff Comparison Simulator
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Simulate potential bills under new or fixed tariffs based on your actual historical consumption
+              Simulate potential electricity and gas bills under new tariffs based on your actual historical consumption
             </p>
           </div>
           <div className="flex items-center space-x-2">
@@ -224,9 +224,14 @@ export const TariffSimulator: React.FC = () => {
 
               {/* Breakdown Table */}
               <div className="bg-white dark:bg-slate-800/80 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
-                  Utility Cost Breakdown
-                </h4>
+                <div className="mb-3">
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Energy Tariff Cost Breakdown
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Comparing proposed rates against actual metered consumption (fixed services such as Broadband, Council Tax, Water, and Estate Charges are excluded).
+                  </p>
+                </div>
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
@@ -240,11 +245,21 @@ export const TariffSimulator: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {simulation.breakdown.map((row) => (
-                      <tr key={row.utility_type} className="hover:bg-slate-50 dark:hover:bg-slate-750">
-                        <td className="py-2.5 font-bold text-slate-800 dark:text-slate-200">
-                          {row.utility_type}
-                        </td>
+                    {simulation.breakdown.map((row) => {
+                      const isElec = row.utility_type === 'ELECTRICITY';
+                      const isGas = row.utility_type === 'GAS';
+                      return (
+                        <tr key={row.utility_type} className="hover:bg-slate-50 dark:hover:bg-slate-750">
+                          <td className="py-2.5 font-bold text-slate-800 dark:text-slate-200">
+                            <div className="flex items-center space-x-1.5">
+                              {isElec ? (
+                                <Zap className="w-4 h-4 text-amber-500" />
+                              ) : isGas ? (
+                                <Flame className="w-4 h-4 text-rose-500" />
+                              ) : null}
+                              <span>{row.utility_type}</span>
+                            </div>
+                          </td>
                         <td className="py-2.5">{row.historical_units.toLocaleString()}</td>
                         <td className="py-2.5 text-slate-600 dark:text-slate-300">
                           {curr}{row.historical_actual_cost.toFixed(2)}
@@ -260,7 +275,8 @@ export const TariffSimulator: React.FC = () => {
                           {row.cost_difference > 0 ? `-${curr}${row.cost_difference.toFixed(2)}` : `+${curr}${Math.abs(row.cost_difference).toFixed(2)}`}
                         </td>
                       </tr>
-                    ))}
+                    );
+                  })}
                   </tbody>
                 </table>
               </div>

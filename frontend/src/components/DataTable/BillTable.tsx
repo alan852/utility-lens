@@ -86,7 +86,7 @@ export const BillTable: React.FC = () => {
               <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Daily Average</th>
               <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Source</th>
               <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold">Notes</th>
-              <th className="sticky top-0 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold text-right">Actions</th>
+              <th className="sticky top-0 right-0 z-20 bg-slate-100 dark:bg-slate-900 py-3 px-4 font-semibold text-right border-l border-slate-200 dark:border-slate-700 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
@@ -115,7 +115,7 @@ export const BillTable: React.FC = () => {
                 const standingPct = b.total_cost > 0 && hasStanding ? Math.round((standingCharge / b.total_cost) * 100) : 0;
 
                 return (
-                  <tr key={b.id} className="hover:bg-slate-100/70 dark:hover:bg-slate-750 transition-colors">
+                  <tr key={b.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                     <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex items-center space-x-1.5 font-bold">
                         {isElec ? (
@@ -204,25 +204,29 @@ export const BillTable: React.FC = () => {
                       </span>
                     </td>
 
-                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">
-                      {b.notes || '-'}
+                    <td className="py-3 px-4 max-w-[200px]">
+                      <div className="truncate max-w-[180px] text-slate-500 dark:text-slate-400" title={b.notes || ''}>
+                        {b.notes || '-'}
+                      </div>
                     </td>
 
-                    <td className="py-3 px-4 whitespace-nowrap text-right">
+                    <td className="sticky right-0 z-10 bg-white dark:bg-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50 py-3 px-4 whitespace-nowrap text-right border-l border-slate-200/80 dark:border-slate-700/80 shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)] transition-colors">
                       <div className="flex items-center justify-end space-x-1">
                         <button
                           onClick={() => setEditingBill(b)}
-                          className="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition"
-                          title="Edit bill"
+                          className="p-1.5 text-slate-500 hover:text-sky-600 dark:text-slate-400 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/50 rounded-lg transition"
+                          title="Edit bill record"
+                          aria-label="Edit bill record"
                         >
-                          <Pencil className="w-3.5 h-3.5" />
+                          <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(b.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition"
-                          title="Delete bill"
+                          className="p-1.5 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition"
+                          title="Delete bill record"
+                          aria-label="Delete bill record"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
