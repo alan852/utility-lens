@@ -18,7 +18,8 @@ import {
   Building,
   ChevronDown,
   CheckSquare,
-  Square
+  Square,
+  Settings
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -119,9 +120,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   onClick={onOpenPropertyModal}
                   title="Manage Properties"
+                  aria-label="Manage Properties"
                   className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition ml-0.5"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Settings className="w-4 h-4" />
                 </button>
               </div>
 
@@ -203,7 +205,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     className="w-full flex items-center space-x-2 px-3 py-1.5 text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition text-left"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Settings className="w-3.5 h-3.5" />
                     <span>Manage Properties...</span>
                   </button>
                 </div>
