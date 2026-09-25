@@ -234,6 +234,11 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
       setError('Please select a property.');
       return;
     }
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (periodStart > todayStr) {
+      setError('Cannot record a bill with a future start date.');
+      return;
+    }
     if (isMetered && (!totalUnits || parseFloat(totalUnits) <= 0)) {
       setError('Please enter valid consumption units.');
       return;
@@ -292,6 +297,11 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
     e.preventDefault();
     if (!selectedPropertyId) {
       setError('Please select a property.');
+      return;
+    }
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (contractStartDate > todayStr) {
+      setError('Contract start date cannot be in the future.');
       return;
     }
     if (parsedMonthlyAmt <= 0) {
@@ -559,6 +569,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                   <input
                     type="date"
                     required
+                    max={new Date().toISOString().split('T')[0]}
                     value={contractStartDate}
                     onChange={(e) => setContractStartDate(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white"
@@ -770,6 +781,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                   <input
                     type="date"
                     required
+                    max={new Date().toISOString().split('T')[0]}
                     value={periodStart}
                     onChange={(e) => setPeriodStart(e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-white"

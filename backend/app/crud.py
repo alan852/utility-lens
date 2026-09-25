@@ -94,7 +94,8 @@ def get_bills_for_properties(
     property_ids: List[str],
     utility_type: Optional[str] = None,
     start_date: Optional[date] = None,
-    end_date: Optional[date] = None
+    end_date: Optional[date] = None,
+    include_future: bool = False
 ) -> List[models.BillRecord]:
     if not property_ids:
         return []
@@ -105,6 +106,8 @@ def get_bills_for_properties(
         q = q.filter(models.BillRecord.period_start >= start_date)
     if end_date:
         q = q.filter(models.BillRecord.period_end <= end_date)
+    if not include_future:
+        q = q.filter(models.BillRecord.period_start <= date.today())
     return q.order_by(desc(models.BillRecord.period_start)).all()
 
 def get_bills(
@@ -112,15 +115,16 @@ def get_bills(
     property_id: str, 
     utility_type: Optional[str] = None,
     start_date: Optional[date] = None,
-    end_date: Optional[date] = None
+    end_date: Optional[date] = None,
+    include_future: bool = False
 ) -> List[models.BillRecord]:
     if not property_id or property_id == "ALL":
         all_props = db.query(models.Property.id).all()
         ids = [p[0] for p in all_props]
-        return get_bills_for_properties(db, ids, utility_type, start_date, end_date)
+        return get_bills_for_properties(db, ids, utility_type, start_date, end_date, include_future)
     if "," in property_id:
         ids = [p.strip() for p in property_id.split(",") if p.strip()]
-        return get_bills_for_properties(db, ids, utility_type, start_date, end_date)
+        return get_bills_for_properties(db, ids, utility_type, start_date, end_date, include_future)
     q = db.query(models.BillRecord).filter(models.BillRecord.property_id == property_id)
     if utility_type:
         q = q.filter(models.BillRecord.utility_type == utility_type.upper())
@@ -128,6 +132,8 @@ def get_bills(
         q = q.filter(models.BillRecord.period_start >= start_date)
     if end_date:
         q = q.filter(models.BillRecord.period_end <= end_date)
+    if not include_future:
+        q = q.filter(models.BillRecord.period_start <= date.today())
     return q.order_by(desc(models.BillRecord.period_start)).all()
 
 def get_bill(db: Session, bill_id: str) -> Optional[models.BillRecord]:
@@ -303,30 +309,36 @@ def create_recurring_contract_bills(
 def get_meter_readings_for_properties(
     db: Session,
     property_ids: List[str],
-    utility_type: Optional[str] = None
+    utility_type: Optional[str] = None,
+    include_future: bool = False
 ) -> List[models.MeterReading]:
     if not property_ids:
         return []
     q = db.query(models.MeterReading).filter(models.MeterReading.property_id.in_(property_ids))
     if utility_type:
         q = q.filter(models.MeterReading.utility_type == utility_type.upper())
+    if not include_future:
+        q = q.filter(models.MeterReading.reading_date <= date.today())
     return q.order_by(desc(models.MeterReading.reading_date)).all()
 
 def get_meter_readings(
     db: Session, 
     property_id: str, 
-    utility_type: Optional[str] = None
+    utility_type: Optional[str] = None,
+    include_future: bool = False
 ) -> List[models.MeterReading]:
     if not property_id or property_id == "ALL":
         all_props = db.query(models.Property.id).all()
         ids = [p[0] for p in all_props]
-        return get_meter_readings_for_properties(db, ids, utility_type)
+        return get_meter_readings_for_properties(db, ids, utility_type, include_future)
     if "," in property_id:
         ids = [p.strip() for p in property_id.split(",") if p.strip()]
-        return get_meter_readings_for_properties(db, ids, utility_type)
+        return get_meter_readings_for_properties(db, ids, utility_type, include_future)
     q = db.query(models.MeterReading).filter(models.MeterReading.property_id == property_id)
     if utility_type:
         q = q.filter(models.MeterReading.utility_type == utility_type.upper())
+    if not include_future:
+        q = q.filter(models.MeterReading.reading_date <= date.today())
     return q.order_by(desc(models.MeterReading.reading_date)).all()
 
 def get_meter_reading(db: Session, reading_id: str) -> Optional[models.MeterReading]:

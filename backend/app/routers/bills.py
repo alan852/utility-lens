@@ -17,14 +17,20 @@ def read_bills(
     utility_type: Optional[str] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    include_future: bool = Query(False),
     db: Session = Depends(get_db)
 ):
     target_property_id = property_id or "ALL"
-    return crud.get_bills(db, target_property_id, utility_type, start_date, end_date)
+    return crud.get_bills(db, target_property_id, utility_type, start_date, end_date, include_future)
 
 @router.post("", response_model=schemas.BillRecordResponse, status_code=status.HTTP_201_CREATED)
 def create_bill(bill_in: schemas.BillRecordCreate, db: Session = Depends(get_db)):
     data = bill_in.model_dump()
+    if data["period_start"] > date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bill statement date cannot be in the future."
+        )
     util = data["utility_type"].upper()
 
     # If Gas was entered in m3, calculate standardized kWh
@@ -96,6 +102,10 @@ def update_bill(bill_id: str, bill_in: schemas.BillRecordUpdate, db: Session = D
     existing = crud.get_bill(db, bill_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Bill record not found")
+    
+    new_start = data.get("period_start", existing.period_start)
+    if new_start and new_start > date.today():
+        raise HTTPException(status_code=400, detail="Cannot set a bill start date in the future.")
     
     util = data.get("utility_type", existing.utility_type).upper()
     if util == "GAS" and data.get("raw_unit_type", existing.raw_unit_type) == "M3" and data.get("raw_meter_units"):

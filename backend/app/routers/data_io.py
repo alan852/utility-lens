@@ -126,6 +126,11 @@ def commit_csv(
                 continue
 
             parsed_start = date_parser.parse(raw_date_str.strip()).date()
+            if parsed_start > date.today():
+                skipped_count += 1
+                errors.append(f"Row {idx}: Future bill date {parsed_start} skipped.")
+                continue
+
             if m.end_date_col and row.get(m.end_date_col):
                 parsed_end = date_parser.parse(row[m.end_date_col].strip()).date()
             else:

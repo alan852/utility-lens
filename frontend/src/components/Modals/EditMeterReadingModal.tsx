@@ -42,6 +42,11 @@ export const EditMeterReadingModal: React.FC<EditMeterReadingModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (readingDate > todayStr) {
+      setError('Reading date cannot be in the future.');
+      return;
+    }
     if (!meterIndex || isNaN(parseFloat(meterIndex))) {
       setError('Please enter a valid meter register index.');
       return;
@@ -154,6 +159,7 @@ export const EditMeterReadingModal: React.FC<EditMeterReadingModalProps> = ({
             <input
               type="date"
               required
+              max={new Date().toISOString().split('T')[0]}
               value={readingDate}
               onChange={(e) => setReadingDate(e.target.value)}
               className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2"

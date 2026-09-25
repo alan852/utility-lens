@@ -38,7 +38,11 @@ def compute_kpis(db: Session, property_id: Union[str, List[str]]) -> schemas.KPI
     property_ids = resolve_property_ids(db, property_id)
     currency = get_currency_symbol(db, property_ids)
 
+    today = date.today()
+    current_period = pd.Period(today, freq="M")
+
     bills = crud.get_bills_for_properties(db, property_ids)
+    bills = [b for b in bills if b.period_start <= today]
     if not bills:
         return schemas.KPISummaryResponse(
             total_spend_trailing_12m=0.0,
@@ -71,58 +75,68 @@ def compute_kpis(db: Session, property_id: Union[str, List[str]]) -> schemas.KPI
     df["period_start"] = pd.to_datetime(df["period_start"])
     df["period_end"] = pd.to_datetime(df["period_end"])
     df["month_period"] = df["period_start"].dt.to_period("M")
+    df = df[df["month_period"] <= current_period]
+
+    if df.empty:
+        return schemas.KPISummaryResponse(
+            total_spend_trailing_12m=0.0,
+            current_month_spend=0.0,
+            previous_month_spend=0.0,
+            month_over_month_change_pct=None,
+            daily_avg_spend=0.0,
+            spend_by_utility_trailing_12m={
+                "ELECTRICITY": 0.0,
+                "GAS": 0.0,
+                "WATER": 0.0,
+                "COUNCIL_TAX": 0.0,
+                "BROADBAND": 0.0,
+                "ESTATE_SERVICE_CHARGE": 0.0,
+            },
+            currency_symbol=currency
+        )
 
     # Group by month period and utility
     monthly_total = df.groupby("month_period")["total_cost"].sum().sort_index()
 
-    # Trailing 12 months
-    latest_period = monthly_total.index.max() if not monthly_total.empty else None
+    # Trailing 12 months anchored to current_period
+    t12_start = current_period - 11
+    df_t12 = df[(df["month_period"] >= t12_start) & (df["month_period"] <= current_period)]
+    total_t12_spend = round(float(df_t12["total_cost"].sum()), 2)
     
-    if latest_period is not None:
-        t12_start = latest_period - 11
-        df_t12 = df[df["month_period"] >= t12_start]
-        total_t12_spend = round(float(df_t12["total_cost"].sum()), 2)
-        
-        # Spend by utility trailing 12m
-        util_t12 = df_t12.groupby("utility_type")["total_cost"].sum().to_dict()
-        spend_by_util = {
-            "ELECTRICITY": round(float(util_t12.get("ELECTRICITY", 0.0)), 2),
-            "GAS": round(float(util_t12.get("GAS", 0.0)), 2),
-            "WATER": round(float(util_t12.get("WATER", 0.0)), 2),
-            "COUNCIL_TAX": round(float(util_t12.get("COUNCIL_TAX", 0.0)), 2),
-            "BROADBAND": round(float(util_t12.get("BROADBAND", 0.0)), 2),
-            "ESTATE_SERVICE_CHARGE": round(float(util_t12.get("ESTATE_SERVICE_CHARGE", 0.0)), 2),
-        }
-        for k, v in util_t12.items():
-            if k not in spend_by_util:
-                spend_by_util[k] = round(float(v), 2)
+    # Spend by utility trailing 12m
+    util_t12 = df_t12.groupby("utility_type")["total_cost"].sum().to_dict()
+    spend_by_util = {
+        "ELECTRICITY": round(float(util_t12.get("ELECTRICITY", 0.0)), 2),
+        "GAS": round(float(util_t12.get("GAS", 0.0)), 2),
+        "WATER": round(float(util_t12.get("WATER", 0.0)), 2),
+        "COUNCIL_TAX": round(float(util_t12.get("COUNCIL_TAX", 0.0)), 2),
+        "BROADBAND": round(float(util_t12.get("BROADBAND", 0.0)), 2),
+        "ESTATE_SERVICE_CHARGE": round(float(util_t12.get("ESTATE_SERVICE_CHARGE", 0.0)), 2),
+    }
+    for k, v in util_t12.items():
+        if k not in spend_by_util:
+            spend_by_util[k] = round(float(v), 2)
 
-        # Current vs previous month
-        current_spend = round(float(monthly_total.get(latest_period, 0.0)), 2)
-        prev_period = latest_period - 1
-        prev_spend = round(float(monthly_total.get(prev_period, 0.0)), 2)
-
-        mom_pct = None
-        if prev_spend > 0:
-            mom_pct = round(((current_spend - prev_spend) / prev_spend) * 100, 1)
-
-        # Days in current month
-        days_in_current_month = calendar.monthrange(latest_period.year, latest_period.month)[1]
-        daily_avg = round(current_spend / days_in_current_month, 2)
+    # Current vs previous month
+    has_current_month_bills = current_period in monthly_total.index and monthly_total[current_period] > 0
+    if has_current_month_bills:
+        active_period = current_period
+        prev_period = current_period - 1
     else:
-        total_t12_spend = 0.0
-        current_spend = 0.0
-        prev_spend = 0.0
-        mom_pct = None
-        daily_avg = 0.0
-        spend_by_util = {
-            "ELECTRICITY": 0.0,
-            "GAS": 0.0,
-            "WATER": 0.0,
-            "COUNCIL_TAX": 0.0,
-            "BROADBAND": 0.0,
-            "ESTATE_SERVICE_CHARGE": 0.0,
-        }
+        available_periods = [p for p in monthly_total.index if p <= current_period]
+        active_period = max(available_periods) if available_periods else current_period
+        prev_period = active_period - 1
+
+    current_spend = round(float(monthly_total.get(active_period, 0.0)), 2)
+    prev_spend = round(float(monthly_total.get(prev_period, 0.0)), 2)
+
+    mom_pct = None
+    if prev_spend > 0:
+        mom_pct = round(((current_spend - prev_spend) / prev_spend) * 100, 1)
+
+    # Days in active month
+    days_in_active_month = calendar.monthrange(active_period.year, active_period.month)[1]
+    daily_avg = round(current_spend / days_in_active_month, 2)
 
     return schemas.KPISummaryResponse(
         total_spend_trailing_12m=total_t12_spend,
@@ -138,7 +152,9 @@ def compute_monthly_breakdown(db: Session, property_id: Union[str, List[str]], m
     property_ids = resolve_property_ids(db, property_id)
     currency = get_currency_symbol(db, property_ids)
 
+    today = date.today()
     bills = crud.get_bills_for_properties(db, property_ids)
+    bills = [b for b in bills if b.period_start <= today]
     if not bills:
         return schemas.MonthlyBreakdownResponse(data=[], currency_symbol=currency)
 
@@ -152,6 +168,12 @@ def compute_monthly_breakdown(db: Session, property_id: Union[str, List[str]], m
         })
     df = pd.DataFrame(records)
     df["period_start"] = pd.to_datetime(df["period_start"])
+    current_period = pd.Period(today, freq="M")
+    df["month_period"] = df["period_start"].dt.to_period("M")
+    df = df[df["month_period"] <= current_period]
+    if df.empty:
+        return schemas.MonthlyBreakdownResponse(data=[], currency_symbol=currency)
+
     df["year"] = df["period_start"].dt.year
     df["month"] = df["period_start"].dt.month
     df["month_label"] = df["period_start"].dt.strftime("%Y-%m")
@@ -210,9 +232,11 @@ def compute_yoy_comparison(
     year_previous: Optional[int] = None
 ) -> schemas.YoYComparisonResponse:
     property_ids = resolve_property_ids(db, property_id)
+    today = date.today()
     bills = crud.get_bills_for_properties(db, property_ids)
+    bills = [b for b in bills if b.period_start <= today]
     if not bills:
-        cur_year = datetime.now().year
+        cur_year = today.year
         return schemas.YoYComparisonResponse(
             years_available=[cur_year],
             comparison_year_current=cur_year,
@@ -230,12 +254,23 @@ def compute_yoy_comparison(
             "total_cost": b.total_cost,
         })
     df = pd.DataFrame(records)
+    df = df[df["year"] <= today.year]
+    if df.empty:
+        cur_year = today.year
+        return schemas.YoYComparisonResponse(
+            years_available=[cur_year],
+            comparison_year_current=cur_year,
+            comparison_year_previous=cur_year - 1,
+            data=[]
+        )
 
-    years_available = sorted(df["year"].unique().tolist())
-    if not year_current:
+    years_available = sorted([int(y) for y in df["year"].unique().tolist() if int(y) <= today.year])
+    if not years_available:
+        years_available = [today.year]
+
+    if not year_current or year_current > today.year:
         year_current = max(years_available)
     if not year_previous:
-        # Default to preceding year or year_current - 1
         older_years = [y for y in years_available if y < year_current]
         year_previous = max(older_years) if older_years else (year_current - 1)
 
@@ -248,7 +283,8 @@ def compute_yoy_comparison(
     items = []
 
     for m in range(1, 13):
-        m_curr = df_curr[df_curr["month"] == m]
+        is_future_month = (year_current == today.year and m > today.month)
+        m_curr = df_curr[df_curr["month"] == m] if not is_future_month else pd.DataFrame()
         m_prev = df_prev[df_prev["month"] == m]
 
         c_cost = float(m_curr["total_cost"].sum()) if not m_curr.empty else 0.0
@@ -260,13 +296,13 @@ def compute_yoy_comparison(
         p_gas = float(m_prev[m_prev["utility_type"] == "GAS"]["total_units"].sum()) if not m_prev.empty else 0.0
 
         cost_diff_pct = None
-        if p_cost > 0:
+        if p_cost > 0 and not is_future_month:
             cost_diff_pct = round(((c_cost - p_cost) / p_cost) * 100, 1)
 
         tot_c_kwh = c_elec + c_gas
         tot_p_kwh = p_elec + p_gas
         kwh_diff_pct = None
-        if tot_p_kwh > 0:
+        if tot_p_kwh > 0 and not is_future_month:
             kwh_diff_pct = round(((tot_c_kwh - tot_p_kwh) / tot_p_kwh) * 100, 1)
 
         items.append(schemas.YoYComparisonItem(
@@ -295,7 +331,9 @@ def compute_baseload_analysis(db: Session, property_id: Union[str, List[str]]) -
     property_ids = resolve_property_ids(db, property_id)
     currency = get_currency_symbol(db, property_ids)
 
+    today = date.today()
     bills = crud.get_bills_for_properties(db, property_ids)
+    bills = [b for b in bills if b.period_start <= today]
     if not bills:
         return schemas.BaseloadAnalysisResponse(currency_symbol=currency, items=[], insights=["No bill records found to analyze baseload."])
 
@@ -370,7 +408,9 @@ def simulate_tariffs(db: Session, request: schemas.TariffSimulationRequest) -> s
     property_ids = resolve_property_ids(db, req_ids)
     currency = get_currency_symbol(db, property_ids)
 
+    today = date.today()
     bills = crud.get_bills_for_properties(db, property_ids)
+    bills = [b for b in bills if b.period_start <= today]
     first_prop_id = property_ids[0] if len(property_ids) == 1 else (request.property_id or "ALL")
     if not bills:
         return schemas.TariffSimulationResponse(
@@ -398,9 +438,9 @@ def simulate_tariffs(db: Session, request: schemas.TariffSimulationRequest) -> s
     df = pd.DataFrame(records)
     df["period_start"] = pd.to_datetime(df["period_start"])
     
-    # Filter by lookback months
+    # Filter by lookback months and exclude future dates
     cutoff = datetime.now() - timedelta(days=request.months_lookback * 30.5)
-    df = df[df["period_start"] >= cutoff]
+    df = df[(df["period_start"] >= cutoff) & (df["period_start"] <= pd.Timestamp(today))]
 
     scenario_map = {s.utility_type.upper(): s for s in request.scenarios}
     

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from typing import List, Optional
+from datetime import date
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import crud, schemas
@@ -10,16 +11,22 @@ router = APIRouter(prefix="/api/meter-readings", tags=["Meter Readings"])
 def read_meter_readings(
     property_id: Optional[str] = Query(None),
     utility_type: Optional[str] = None,
+    include_future: bool = Query(False),
     db: Session = Depends(get_db)
 ):
     target_property_id = property_id or "ALL"
-    return crud.get_meter_readings(db, target_property_id, utility_type)
+    return crud.get_meter_readings(db, target_property_id, utility_type, include_future)
 
 @router.post("", response_model=schemas.MeterReadingResponse, status_code=status.HTTP_201_CREATED)
 def create_meter_reading(
     reading_in: schemas.MeterReadingCreate,
     db: Session = Depends(get_db)
 ):
+    if reading_in.reading_date > date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Meter reading date cannot be in the future."
+        )
     return crud.create_meter_reading(db, reading_in)
 
 @router.get("/{reading_id}", response_model=schemas.MeterReadingResponse)
@@ -35,6 +42,11 @@ def update_meter_reading(
     reading_in: schemas.MeterReadingUpdate,
     db: Session = Depends(get_db)
 ):
+    if reading_in.reading_date and reading_in.reading_date > date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Meter reading date cannot be in the future."
+        )
     updated = crud.update_meter_reading(db, reading_id, reading_in)
     if not updated:
         raise HTTPException(status_code=404, detail="Meter reading not found")

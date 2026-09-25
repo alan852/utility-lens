@@ -108,6 +108,11 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (periodStart > todayStr) {
+      setError('Cannot set a bill start date in the future.');
+      return;
+    }
     if (isMetered && (!totalUnits || parseFloat(totalUnits) < 0)) {
       setError('Please enter valid consumption units.');
       return;
@@ -284,6 +289,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
               <input
                 type="date"
                 required
+                max={new Date().toISOString().split('T')[0]}
                 value={periodStart}
                 onChange={(e) => setPeriodStart(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2"

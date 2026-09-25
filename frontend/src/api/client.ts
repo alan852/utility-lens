@@ -87,12 +87,13 @@ export const api = {
   },
 
   // Bills
-  async getBills(propertyId?: string | string[], utilityType?: string): Promise<BillRecord[]> {
+  async getBills(propertyId?: string | string[], utilityType?: string, includeFuture: boolean = false): Promise<BillRecord[]> {
     const pParam = Array.isArray(propertyId) ? propertyId.join(',') : (propertyId || '');
     let url = `${API_BASE}/bills`;
     const params = new URLSearchParams();
     if (pParam) params.append('property_id', pParam);
     if (utilityType) params.append('utility_type', utilityType);
+    if (includeFuture) params.append('include_future', 'true');
     const queryString = params.toString();
     if (queryString) url += `?${queryString}`;
 
@@ -140,12 +141,13 @@ export const api = {
   },
 
   // Meter Readings
-  async getMeterReadings(propertyId?: string | string[], utilityType?: string): Promise<MeterReading[]> {
+  async getMeterReadings(propertyId?: string | string[], utilityType?: string, includeFuture: boolean = false): Promise<MeterReading[]> {
     const pParam = Array.isArray(propertyId) ? propertyId.join(',') : (propertyId || '');
     let url = `${API_BASE}/meter-readings`;
     const params = new URLSearchParams();
     if (pParam) params.append('property_id', pParam);
     if (utilityType) params.append('utility_type', utilityType);
+    if (includeFuture) params.append('include_future', 'true');
     const queryString = params.toString();
     if (queryString) url += `?${queryString}`;
 

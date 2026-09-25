@@ -21,7 +21,8 @@ export const BillTable: React.FC = () => {
         ? undefined 
         : (selectedPropertyIds.length > 0 ? selectedPropertyIds : undefined);
       const data = await api.getBills(propParam, filterUtil || undefined);
-      setBills(data);
+      const todayStr = new Date().toISOString().split('T')[0];
+      setBills(data.filter((b) => b.period_start <= todayStr));
     } catch (err) {
       console.error('Failed to load bills:', err);
     } finally {

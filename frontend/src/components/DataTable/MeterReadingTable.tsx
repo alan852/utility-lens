@@ -18,7 +18,8 @@ export const MeterReadingTable: React.FC = () => {
         ? undefined 
         : (selectedPropertyIds.length > 0 ? selectedPropertyIds : undefined);
       const data = await api.getMeterReadings(propParam);
-      setReadings(data);
+      const todayStr = new Date().toISOString().split('T')[0];
+      setReadings(data.filter((r) => r.reading_date <= todayStr));
     } catch (err) {
       console.error('Failed to load readings:', err);
     } finally {

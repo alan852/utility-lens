@@ -62,6 +62,11 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
       setError('Please select a property.');
       return;
     }
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (readingDate > todayStr) {
+      setError('Reading date cannot be in the future.');
+      return;
+    }
     if (!meterIndex || parseFloat(meterIndex) < 0) {
       setError('Please enter a valid cumulative meter reading index.');
       return;
@@ -182,6 +187,7 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
             <input
               type="date"
               required
+              max={new Date().toISOString().split('T')[0]}
               value={readingDate}
               onChange={(e) => setReadingDate(e.target.value)}
               className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2"
