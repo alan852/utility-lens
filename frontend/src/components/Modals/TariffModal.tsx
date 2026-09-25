@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { TariffPlan, UtilityType } from '../../types';
-import { Calculator, X, Plus, Trash2, Zap, Flame, Droplets, AlertCircle } from 'lucide-react';
+import { Calculator, X, Plus, Trash2, Pencil, Zap, Flame, Droplets, AlertCircle } from 'lucide-react';
 
 interface TariffModalProps {
   isOpen: boolean;
@@ -14,6 +14,7 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
   const [tariffs, setTariffs] = useState<TariffPlan[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [editingTariff, setEditingTariff] = useState<TariffPlan | null>(null);
 
   // Form state
   const [utilityType, setUtilityType] = useState<UtilityType>('ELECTRICITY');
@@ -22,6 +23,28 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
   const [standingCharge, setStandingCharge] = useState<string>('0.55');
   const [validFrom, setValidFrom] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [error, setError] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setName('');
+    setUnitRate('0.245');
+    setStandingCharge('0.55');
+    setValidFrom(new Date().toISOString().split('T')[0]);
+    setUtilityType('ELECTRICITY');
+    setEditingTariff(null);
+    setShowAddForm(false);
+    setError(null);
+  };
+
+  const handleStartEdit = (t: TariffPlan) => {
+    setEditingTariff(t);
+    setUtilityType(t.utility_type);
+    setName(t.name);
+    setUnitRate(t.unit_rate.toString());
+    setStandingCharge(t.standing_charge.toString());
+    setValidFrom(t.valid_from);
+    setShowAddForm(true);
+    setError(null);
+  };
 
   const loadTariffs = async () => {
     if (!currentProperty) return;
@@ -46,24 +69,34 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
 
   const curr = currentProperty?.currency_symbol || '£';
 
-  const handleCreateTariff = async (e: React.FormEvent) => {
+  const handleSaveTariff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentProperty || !name.trim()) return;
 
     try {
-      await api.createTariff({
-        property_id: currentProperty.id,
-        utility_type: utilityType,
-        name: name.trim(),
-        valid_from: validFrom,
-        unit_rate: parseFloat(unitRate),
-        standing_charge: parseFloat(standingCharge),
-        vat_rate: utilityType === 'WATER' ? 0.0 : 0.05,
-        is_active: true,
-      });
+      if (editingTariff) {
+        await api.updateTariff(editingTariff.id, {
+          utility_type: utilityType,
+          name: name.trim(),
+          valid_from: validFrom,
+          unit_rate: parseFloat(unitRate),
+          standing_charge: parseFloat(standingCharge),
+          vat_rate: utilityType === 'WATER' ? 0.0 : 0.05,
+        });
+      } else {
+        await api.createTariff({
+          property_id: currentProperty.id,
+          utility_type: utilityType,
+          name: name.trim(),
+          valid_from: validFrom,
+          unit_rate: parseFloat(unitRate),
+          standing_charge: parseFloat(standingCharge),
+          vat_rate: utilityType === 'WATER' ? 0.0 : 0.05,
+          is_active: true,
+        });
+      }
 
-      setName('');
-      setShowAddForm(false);
+      resetForm();
       loadTariffs();
       triggerRefresh();
     } catch (err: any) {
@@ -75,6 +108,9 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
     if (confirm('Delete this tariff plan?')) {
       try {
         await api.deleteTariff(id);
+        if (editingTariff?.id === id) {
+          resetForm();
+        }
         loadTariffs();
         triggerRefresh();
       } catch (err: any) {
@@ -143,12 +179,22 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteTariff(t.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => handleStartEdit(t)}
+                      className="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-950/40 transition"
+                      title="Edit tariff plan"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTariff(t.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                      title="Delete tariff plan"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -158,10 +204,12 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
             )}
           </div>
 
-          {/* Add Tariff Accordion/Form */}
+          {/* Add / Edit Tariff Accordion/Form */}
           {showAddForm ? (
-            <form onSubmit={handleCreateTariff} className="p-4 rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50/50 dark:bg-sky-950/30 space-y-3 text-xs">
-              <h4 className="font-bold text-slate-900 dark:text-white">Add New Tariff Plan</h4>
+            <form onSubmit={handleSaveTariff} className="p-4 rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50/50 dark:bg-sky-950/30 space-y-3 text-xs">
+              <h4 className="font-bold text-slate-900 dark:text-white">
+                {editingTariff ? `Edit Tariff: ${editingTariff.name}` : 'Add New Tariff Plan'}
+              </h4>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -234,7 +282,7 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
               <div className="flex justify-end space-x-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowAddForm(false)}
+                  onClick={resetForm}
                   className="px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800"
                 >
                   Cancel
@@ -243,13 +291,13 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
                   type="submit"
                   className="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold shadow-sm"
                 >
-                  Save Tariff
+                  {editingTariff ? 'Update Tariff' : 'Save Tariff'}
                 </button>
               </div>
             </form>
           ) : (
             <button
-              onClick={() => setShowAddForm(true)}
+              onClick={() => { resetForm(); setShowAddForm(true); }}
               className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-sky-500 hover:text-sky-600 text-xs font-semibold flex items-center justify-center transition"
             >
               <Plus className="w-4 h-4 mr-1.5" />

@@ -21,6 +21,24 @@ def create_meter_reading(
 ):
     return crud.create_meter_reading(db, reading_in)
 
+@router.get("/{reading_id}", response_model=schemas.MeterReadingResponse)
+def read_meter_reading(reading_id: str, db: Session = Depends(get_db)):
+    reading = crud.get_meter_reading(db, reading_id)
+    if not reading:
+        raise HTTPException(status_code=404, detail="Meter reading not found")
+    return reading
+
+@router.put("/{reading_id}", response_model=schemas.MeterReadingResponse)
+def update_meter_reading(
+    reading_id: str,
+    reading_in: schemas.MeterReadingUpdate,
+    db: Session = Depends(get_db)
+):
+    updated = crud.update_meter_reading(db, reading_id, reading_in)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Meter reading not found")
+    return updated
+
 @router.delete("/{reading_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_meter_reading(reading_id: str, db: Session = Depends(get_db)):
     success = crud.delete_meter_reading(db, reading_id)

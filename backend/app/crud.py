@@ -62,6 +62,22 @@ def create_tariff(db: Session, tariff_in: schemas.TariffPlanCreate) -> models.Ta
     db.refresh(db_tariff)
     return db_tariff
 
+def get_tariff(db: Session, tariff_id: str) -> Optional[models.TariffPlan]:
+    return db.query(models.TariffPlan).filter(models.TariffPlan.id == tariff_id).first()
+
+def update_tariff(db: Session, tariff_id: str, tariff_in: schemas.TariffPlanUpdate) -> Optional[models.TariffPlan]:
+    db_tariff = get_tariff(db, tariff_id)
+    if not db_tariff:
+        return None
+    data = tariff_in.model_dump(exclude_unset=True)
+    if "utility_type" in data and data["utility_type"]:
+        data["utility_type"] = data["utility_type"].upper()
+    for k, v in data.items():
+        setattr(db_tariff, k, v)
+    db.commit()
+    db.refresh(db_tariff)
+    return db_tariff
+
 def delete_tariff(db: Session, tariff_id: str) -> bool:
     tariff = db.query(models.TariffPlan).filter(models.TariffPlan.id == tariff_id).first()
     if not tariff:
@@ -103,7 +119,10 @@ def update_bill(db: Session, bill_id: str, bill_in: schemas.BillRecordUpdate) ->
     db_bill = get_bill(db, bill_id)
     if not db_bill:
         return None
-    for k, v in bill_in.model_dump(exclude_unset=True).items():
+    data = bill_in.model_dump(exclude_unset=True)
+    if "utility_type" in data and data["utility_type"]:
+        data["utility_type"] = data["utility_type"].upper()
+    for k, v in data.items():
         setattr(db_bill, k, v)
     db.commit()
     db.refresh(db_bill)
@@ -128,11 +147,27 @@ def get_meter_readings(
         q = q.filter(models.MeterReading.utility_type == utility_type.upper())
     return q.order_by(desc(models.MeterReading.reading_date)).all()
 
+def get_meter_reading(db: Session, reading_id: str) -> Optional[models.MeterReading]:
+    return db.query(models.MeterReading).filter(models.MeterReading.id == reading_id).first()
+
 def create_meter_reading(db: Session, reading_in: schemas.MeterReadingCreate) -> models.MeterReading:
     data = reading_in.model_dump()
     data["utility_type"] = data["utility_type"].upper()
     db_reading = models.MeterReading(**data)
     db.add(db_reading)
+    db.commit()
+    db.refresh(db_reading)
+    return db_reading
+
+def update_meter_reading(db: Session, reading_id: str, reading_in: schemas.MeterReadingUpdate) -> Optional[models.MeterReading]:
+    db_reading = get_meter_reading(db, reading_id)
+    if not db_reading:
+        return None
+    data = reading_in.model_dump(exclude_unset=True)
+    if "utility_type" in data and data["utility_type"]:
+        data["utility_type"] = data["utility_type"].upper()
+    for k, v in data.items():
+        setattr(db_reading, k, v)
     db.commit()
     db.refresh(db_reading)
     return db_reading

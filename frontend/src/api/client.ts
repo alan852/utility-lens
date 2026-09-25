@@ -52,6 +52,16 @@ export const api = {
     return res.json();
   },
 
+  async updateTariff(tariffId: string, data: Partial<Omit<TariffPlan, 'id' | 'created_at'>>): Promise<TariffPlan> {
+    const res = await fetch(`${API_BASE}/tariffs/${tariffId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update tariff');
+    return res.json();
+  },
+
   async deleteTariff(tariffId: string): Promise<void> {
     const res = await fetch(`${API_BASE}/tariffs/${tariffId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete tariff');
@@ -77,6 +87,16 @@ export const api = {
     return res.json();
   },
 
+  async updateBill(billId: string, data: Partial<Omit<BillRecord, 'id' | 'created_at'>>): Promise<BillRecord> {
+    const res = await fetch(`${API_BASE}/bills/${billId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update bill');
+    return res.json();
+  },
+
   async deleteBill(billId: string): Promise<void> {
     const res = await fetch(`${API_BASE}/bills/${billId}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete bill');
@@ -99,6 +119,16 @@ export const api = {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to save meter reading');
+    return res.json();
+  },
+
+  async updateMeterReading(readingId: string, data: Partial<Omit<MeterReading, 'id' | 'created_at'>>): Promise<MeterReading> {
+    const res = await fetch(`${API_BASE}/meter-readings/${readingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update meter reading');
     return res.json();
   },
 

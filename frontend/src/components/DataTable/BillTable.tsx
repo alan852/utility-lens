@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { BillRecord } from '../../types';
-import { Trash2, Zap, Flame, Droplets, Filter } from 'lucide-react';
+import { Trash2, Pencil, Zap, Flame, Droplets, Filter } from 'lucide-react';
+import { EditBillModal } from '../Modals/EditBillModal';
 
 export const BillTable: React.FC = () => {
   const { currentProperty, refreshKey, triggerRefresh } = useApp();
   const [bills, setBills] = useState<BillRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [filterUtil, setFilterUtil] = useState<string>('');
+  const [editingBill, setEditingBill] = useState<BillRecord | null>(null);
 
   const loadBills = async () => {
     if (!currentProperty) return;
@@ -182,13 +184,22 @@ export const BillTable: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-4 whitespace-nowrap text-right">
-                      <button
-                        onClick={() => handleDelete(b.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition"
-                        title="Delete bill"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-end space-x-1">
+                        <button
+                          onClick={() => setEditingBill(b)}
+                          className="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition"
+                          title="Edit bill"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(b.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition"
+                          title="Delete bill"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -197,6 +208,12 @@ export const BillTable: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      <EditBillModal
+        bill={editingBill}
+        isOpen={!!editingBill}
+        onClose={() => setEditingBill(null)}
+      />
     </div>
   );
 };

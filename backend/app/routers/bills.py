@@ -75,11 +75,20 @@ def update_bill(bill_id: str, bill_in: schemas.BillRecordUpdate, db: Session = D
     if not existing:
         raise HTTPException(status_code=404, detail="Bill record not found")
     
-    # If standing charge or total was updated, adjust unit_rate_cost if needed
-    new_tot = data.get("total_cost", existing.total_cost)
-    new_sc = data.get("standing_charge_cost", existing.standing_charge_cost)
-    if "unit_rate_cost" not in data and new_sc is not None and new_tot is not None:
-        data["unit_rate_cost"] = round(max(0.0, new_tot - new_sc), 2)
+    util = data.get("utility_type", existing.utility_type).upper()
+    if util == "GAS" and data.get("raw_unit_type", existing.raw_unit_type) == "M3" and data.get("raw_meter_units"):
+        data["total_units"] = convert_gas_m3_to_kwh(data["raw_meter_units"])
+
+    # Reconcile costs
+    if "standing_charge_cost" in data and "unit_rate_cost" in data and "total_cost" not in data:
+        data["total_cost"] = round(data["standing_charge_cost"] + data["unit_rate_cost"], 2)
+    else:
+        new_tot = data.get("total_cost", existing.total_cost)
+        new_sc = data.get("standing_charge_cost", existing.standing_charge_cost)
+        if "unit_rate_cost" not in data and new_sc is not None and new_tot is not None:
+            data["unit_rate_cost"] = round(max(0.0, new_tot - new_sc), 2)
+        elif "unit_rate_cost" in data and "standing_charge_cost" not in data and new_tot is not None:
+            data["standing_charge_cost"] = round(max(0.0, new_tot - data["unit_rate_cost"]), 2)
         
     bill = crud.update_bill(db, bill_id, schemas.BillRecordUpdate(**data))
     return bill

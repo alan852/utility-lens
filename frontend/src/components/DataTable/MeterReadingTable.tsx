@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { MeterReading } from '../../types';
-import { Trash2, Zap, Flame } from 'lucide-react';
+import { Trash2, Pencil, Zap, Flame } from 'lucide-react';
+import { EditMeterReadingModal } from '../Modals/EditMeterReadingModal';
 
 export const MeterReadingTable: React.FC = () => {
   const { currentProperty, refreshKey, triggerRefresh } = useApp();
   const [readings, setReadings] = useState<MeterReading[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [editingReading, setEditingReading] = useState<MeterReading | null>(null);
 
   const loadReadings = async () => {
     if (!currentProperty) return;
@@ -102,13 +104,22 @@ export const MeterReadingTable: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-4 whitespace-nowrap text-right">
-                      <button
-                        onClick={() => handleDelete(r.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition"
-                        title="Delete reading"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-end space-x-1">
+                        <button
+                          onClick={() => setEditingReading(r)}
+                          className="p-1.5 text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition"
+                          title="Edit reading"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(r.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-lg transition"
+                          title="Delete reading"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -117,6 +128,12 @@ export const MeterReadingTable: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      <EditMeterReadingModal
+        reading={editingReading}
+        isOpen={!!editingReading}
+        onClose={() => setEditingReading(null)}
+      />
     </div>
   );
 };

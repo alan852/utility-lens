@@ -40,6 +40,7 @@ class TariffPlanCreate(TariffPlanBase):
 
 class TariffPlanUpdate(BaseModel):
     name: Optional[str] = None
+    utility_type: Optional[str] = None
     valid_from: Optional[date] = None
     valid_to: Optional[date] = None
     unit_rate: Optional[float] = None
@@ -73,6 +74,7 @@ class BillRecordCreate(BillRecordBase):
     pass
 
 class BillRecordUpdate(BaseModel):
+    utility_type: Optional[str] = None
     period_start: Optional[date] = None
     period_end: Optional[date] = None
     total_units: Optional[float] = None
@@ -102,6 +104,14 @@ class MeterReadingBase(BaseModel):
 
 class MeterReadingCreate(MeterReadingBase):
     pass
+
+class MeterReadingUpdate(BaseModel):
+    utility_type: Optional[str] = None
+    reading_date: Optional[date] = None
+    meter_index: Optional[float] = None
+    meter_unit: Optional[str] = None
+    reading_type: Optional[str] = None
+    notes: Optional[str] = None
 
 class MeterReadingResponse(MeterReadingBase):
     id: str

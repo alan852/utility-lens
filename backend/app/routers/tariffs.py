@@ -32,6 +32,24 @@ def create_tariff(
 ):
     return crud.create_tariff(db, tariff_in)
 
+@router.get("/{tariff_id}", response_model=schemas.TariffPlanResponse)
+def read_tariff(tariff_id: str, db: Session = Depends(get_db)):
+    tariff = crud.get_tariff(db, tariff_id)
+    if not tariff:
+        raise HTTPException(status_code=404, detail="Tariff not found")
+    return tariff
+
+@router.put("/{tariff_id}", response_model=schemas.TariffPlanResponse)
+def update_tariff(
+    tariff_id: str,
+    tariff_in: schemas.TariffPlanUpdate,
+    db: Session = Depends(get_db)
+):
+    updated = crud.update_tariff(db, tariff_id, tariff_in)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Tariff not found")
+    return updated
+
 @router.delete("/{tariff_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_tariff(tariff_id: str, db: Session = Depends(get_db)):
     success = crud.delete_tariff(db, tariff_id)

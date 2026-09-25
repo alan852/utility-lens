@@ -26,7 +26,7 @@ Built with a **React 18 + Tailwind CSS + Recharts** frontend, a **Python FastAPI
    - **UK Standing Charge Support**: Separates daily standing charge from usage/consumption costs across manual logging, tables, CSV import, and tariff simulations.
    - **Gas Meter Support**: Direct entry in $m^3$ with automatic conversion to standard UK calorific kWh ($m^3 \times 1.02264 \times 40.0 / 3.6$).
    - **Downloadable Sample CSV**: Template available with one click directly from the UI.
-   - **Manual Loggers**: Quick modal forms for recording monthly statements with auto-calculation from active tariffs.
+   - **Manual Loggers & In-Place Editing**: Quick modal forms for recording monthly statements with auto-calculation from active tariffs, plus dedicated in-place edit modals for bill records, physical meter readings, and tariff plans.
 
 5. **Multi-Property & Frictionless Local Mode**:
    - No login or passwords required for local use.
