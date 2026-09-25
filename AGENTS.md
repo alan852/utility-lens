@@ -350,6 +350,7 @@ When working on this repository, strictly adhere to these practices:
    - **Never make changes directly to the `main` branch.**
    - **Create a feature / bugfix branch for each feature or bugfix** (e.g., `feature/<name>` or `bugfix/<name>`).
    - **Always make a commit for each change** with a clear, conventional commit message.
+   - **Always drop (delete) the feature / bugfix branch after it is merged to `main`** (e.g., `git branch -d <branch-name>`).
 
 2. **Full-Stack Schema Synchronization**:
    Whenever a database model column is added or modified:
