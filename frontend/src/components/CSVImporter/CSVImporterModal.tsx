@@ -264,6 +264,9 @@ export const CSVImporterModal: React.FC<CSVImporterModalProps> = ({ isOpen, onCl
                       <option value="ELECTRICITY">Electricity</option>
                       <option value="GAS">Gas</option>
                       <option value="WATER">Water</option>
+                      <option value="COUNCIL_TAX">Council Tax</option>
+                      <option value="BROADBAND">Broadband</option>
+                      <option value="ESTATE_SERVICE_CHARGE">Estate Service Charge</option>
                     </select>
                   </div>
                 )}

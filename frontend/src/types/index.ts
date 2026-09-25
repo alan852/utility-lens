@@ -1,4 +1,4 @@
-export type UtilityType = 'ELECTRICITY' | 'GAS' | 'WATER';
+export type UtilityType = 'ELECTRICITY' | 'GAS' | 'WATER' | 'COUNCIL_TAX' | 'BROADBAND' | 'ESTATE_SERVICE_CHARGE';
 
 export interface Property {
   id: string;
@@ -68,6 +68,9 @@ export interface MonthlyBreakdownItem {
   electricity_cost: number;
   gas_cost: number;
   water_cost: number;
+  council_tax_cost?: number;
+  broadband_cost?: number;
+  estate_service_charge_cost?: number;
   total_cost: number;
   electricity_units: number;
   gas_units: number;

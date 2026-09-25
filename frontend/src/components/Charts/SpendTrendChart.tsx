@@ -44,6 +44,24 @@ export const SpendTrendChart: React.FC<SpendTrendChartProps> = ({ data, currency
               <span>Water:</span>
               <span className="font-semibold">{currencySymbol}{item.water_cost.toFixed(2)} ({item.water_units} m³)</span>
             </div>
+            {(item.council_tax_cost ?? 0) > 0 && (
+              <div className="flex justify-between space-x-4 text-purple-600 dark:text-purple-400">
+                <span>Council Tax:</span>
+                <span className="font-semibold">{currencySymbol}{(item.council_tax_cost ?? 0).toFixed(2)}</span>
+              </div>
+            )}
+            {(item.broadband_cost ?? 0) > 0 && (
+              <div className="flex justify-between space-x-4 text-emerald-600 dark:text-emerald-400">
+                <span>Broadband:</span>
+                <span className="font-semibold">{currencySymbol}{(item.broadband_cost ?? 0).toFixed(2)}</span>
+              </div>
+            )}
+            {(item.estate_service_charge_cost ?? 0) > 0 && (
+              <div className="flex justify-between space-x-4 text-pink-600 dark:text-pink-400">
+                <span>Service Charge:</span>
+                <span className="font-semibold">{currencySymbol}{(item.estate_service_charge_cost ?? 0).toFixed(2)}</span>
+              </div>
+            )}
             <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between font-bold text-slate-900 dark:text-white">
               <span>Total:</span>
               <span>{currencySymbol}{item.total_cost.toFixed(2)}</span>
@@ -65,7 +83,7 @@ export const SpendTrendChart: React.FC<SpendTrendChartProps> = ({ data, currency
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Monthly Utility Spend</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Stacked breakdown of electricity, gas, and water costs
+            Stacked breakdown of household utilities & fixed service charges
           </p>
         </div>
         <div className="mt-2 sm:mt-0 flex items-center space-x-2">
@@ -99,7 +117,10 @@ export const SpendTrendChart: React.FC<SpendTrendChartProps> = ({ data, currency
               <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
               <Bar yAxisId="left" dataKey="electricity_cost" name="Electricity" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} />
               <Bar yAxisId="left" dataKey="gas_cost" name="Gas" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
-              <Bar yAxisId="left" dataKey="water_cost" name="Water" stackId="a" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+              <Bar yAxisId="left" dataKey="water_cost" name="Water" stackId="a" fill="#06b6d4" radius={[0, 0, 0, 0]} />
+              <Bar yAxisId="left" dataKey="council_tax_cost" name="Council Tax" stackId="a" fill="#8b5cf6" radius={[0, 0, 0, 0]} />
+              <Bar yAxisId="left" dataKey="broadband_cost" name="Broadband" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+              <Bar yAxisId="left" dataKey="estate_service_charge_cost" name="Service Charge" stackId="a" fill="#ec4899" radius={[4, 4, 0, 0]} />
               {showDailyAvg && (
                 <Line yAxisId="right" type="monotone" dataKey="daily_avg_cost" name="Daily Avg (£/d)" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
               )}

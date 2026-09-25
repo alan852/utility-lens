@@ -1,6 +1,6 @@
 # ⚡ UtilityLens — Home Utility Analysis
 
-A modern, local-first web application designed to track, analyze, and optimize household utility consumption and expenditure across **Electricity**, **Natural Gas**, and **Water**.
+A modern, local-first web application designed to track, analyze, and optimize household utility consumption and expenditure across **Electricity**, **Natural Gas**, **Water**, **Council Tax**, **Broadband**, and **Estate Service Charges**.
 
 Built with a **React 18 + Tailwind CSS + Recharts** frontend, a **Python FastAPI + Pandas + SQLAlchemy** analytics engine, and orchestrated with **Docker Compose**.
 
@@ -9,7 +9,7 @@ Built with a **React 18 + Tailwind CSS + Recharts** frontend, a **Python FastAPI
 ## 🌟 Key Features
 
 1. **Dashboard & Cost Trends**:
-   - **Monthly Spend Stacked Chart**: Visual breakdown of Electricity + Gas + Water spend over time with optional daily cost overlay.
+   - **Monthly Spend Stacked Chart**: Visual breakdown of Electricity + Gas + Water + Council Tax + Broadband + Estate Service Charge spend over time with optional daily cost overlay.
    - **Consumption Volume Trends**: Energy in kWh (electricity & gas) plotted alongside water usage in m³.
    - **KPI Summary Cards**: Trailing 12-month spend, current month spend vs prior month (% MoM change), daily normalized average cost, and percentage share by utility.
 

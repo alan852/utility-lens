@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { TariffPlan, UtilityType } from '../../types';
-import { Calculator, X, Plus, Trash2, Pencil, Zap, Flame, Droplets, AlertCircle } from 'lucide-react';
+import { Calculator, X, Plus, Trash2, Pencil, Zap, Flame, Droplets, AlertCircle, Landmark, Wifi, ShieldCheck } from 'lucide-react';
 
 interface TariffModalProps {
   isOpen: boolean;
@@ -69,6 +69,12 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
 
   const curr = currentProperty?.currency_symbol || '£';
 
+  const getVatForUtility = (util: UtilityType) => {
+    if (util === 'WATER' || util === 'COUNCIL_TAX' || util === 'ESTATE_SERVICE_CHARGE') return 0.0;
+    if (util === 'BROADBAND') return 0.20;
+    return 0.05;
+  };
+
   const handleSaveTariff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentProperty || !name.trim()) return;
@@ -87,7 +93,7 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
           valid_from: validFrom,
           unit_rate: parsedUnitRate,
           standing_charge: parseFloat(standingCharge) || 0.0,
-          vat_rate: utilityType === 'WATER' ? 0.0 : 0.05,
+          vat_rate: getVatForUtility(utilityType),
         });
       } else {
         await api.createTariff({
@@ -97,7 +103,7 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
           valid_from: validFrom,
           unit_rate: parsedUnitRate,
           standing_charge: parseFloat(standingCharge) || 0.0,
-          vat_rate: utilityType === 'WATER' ? 0.0 : 0.05,
+          vat_rate: getVatForUtility(utilityType),
           is_active: true,
         });
       }
@@ -125,6 +131,25 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
     }
   };
 
+  const renderTariffIcon = (uType: UtilityType) => {
+    switch (uType) {
+      case 'ELECTRICITY':
+        return <div className="p-2 rounded-lg bg-amber-50 text-amber-500 dark:bg-amber-950/60"><Zap className="w-4 h-4" /></div>;
+      case 'GAS':
+        return <div className="p-2 rounded-lg bg-rose-50 text-rose-500 dark:bg-rose-950/60"><Flame className="w-4 h-4" /></div>;
+      case 'WATER':
+        return <div className="p-2 rounded-lg bg-cyan-50 text-cyan-500 dark:bg-cyan-950/60"><Droplets className="w-4 h-4" /></div>;
+      case 'COUNCIL_TAX':
+        return <div className="p-2 rounded-lg bg-purple-50 text-purple-500 dark:bg-purple-950/60"><Landmark className="w-4 h-4" /></div>;
+      case 'BROADBAND':
+        return <div className="p-2 rounded-lg bg-emerald-50 text-emerald-500 dark:bg-emerald-950/60"><Wifi className="w-4 h-4" /></div>;
+      case 'ESTATE_SERVICE_CHARGE':
+        return <div className="p-2 rounded-lg bg-pink-50 text-pink-500 dark:bg-pink-950/60"><ShieldCheck className="w-4 h-4" /></div>;
+      default:
+        return <div className="p-2 rounded-lg bg-slate-100 text-slate-500"><Zap className="w-4 h-4" /></div>;
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -137,7 +162,7 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Tariffs & Unit Rates</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Active energy rates for {currentProperty?.name}
+                Active utility plans and rates for {currentProperty?.name}
               </p>
             </div>
           </div>
@@ -160,19 +185,14 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
             {tariffs.map((t) => {
               const isElec = t.utility_type === 'ELECTRICITY';
               const isGas = t.utility_type === 'GAS';
+              const isWater = t.utility_type === 'WATER';
               return (
                 <div
                   key={t.id}
                   className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${
-                      isElec ? 'bg-amber-50 text-amber-500 dark:bg-amber-950/60' :
-                      isGas ? 'bg-rose-50 text-rose-500 dark:bg-rose-950/60' :
-                      'bg-cyan-50 text-cyan-500 dark:bg-cyan-950/60'
-                    }`}>
-                      {isElec ? <Zap className="w-4 h-4" /> : isGas ? <Flame className="w-4 h-4" /> : <Droplets className="w-4 h-4" />}
-                    </div>
+                    {renderTariffIcon(t.utility_type)}
                     <div>
                       <div className="flex items-center space-x-2">
                         <span className="text-sm font-bold text-slate-900 dark:text-white">{t.name}</span>
@@ -181,12 +201,12 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
                         </span>
                         {t.unit_rate == null && (
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60">
-                            Variable Rate
+                            Fixed / Subscription
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Rate: <strong>{t.unit_rate != null ? `${curr}${t.unit_rate}/${isGas || isElec ? 'kWh' : 'm³'}` : 'Variable (date-to-date)'}</strong> • Standing: <strong>{curr}{t.standing_charge}</strong>/day • Valid from: {t.valid_from}
+                        Rate: <strong>{t.unit_rate != null ? `${curr}${t.unit_rate}/${isGas || isElec ? 'kWh' : isWater ? 'm³' : 'unit'}` : 'Flat rate'}</strong> • Standing / Daily: <strong>{curr}{t.standing_charge}</strong>/day • Valid from: {t.valid_from}
                       </p>
                     </div>
                   </div>
@@ -233,6 +253,9 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
                     <option value="ELECTRICITY">Electricity</option>
                     <option value="GAS">Gas</option>
                     <option value="WATER">Water</option>
+                    <option value="COUNCIL_TAX">Council Tax</option>
+                    <option value="BROADBAND">Broadband</option>
+                    <option value="ESTATE_SERVICE_CHARGE">Estate Service Charge</option>
                   </select>
                 </div>
 

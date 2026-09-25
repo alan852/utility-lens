@@ -26,7 +26,7 @@ class UtilityAccount(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     property_id = Column(String(36), ForeignKey("properties.id", ondelete="CASCADE"), nullable=False)
-    utility_type = Column(String(20), nullable=False)  # ELECTRICITY, GAS, WATER
+    utility_type = Column(String(50), nullable=False)  # ELECTRICITY, GAS, WATER, COUNCIL_TAX, BROADBAND, ESTATE_SERVICE_CHARGE
     meter_type = Column(String(20), default="KWH")  # KWH, M3, IMPERIAL_100CF
     provider_name = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -38,7 +38,7 @@ class TariffPlan(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     property_id = Column(String(36), ForeignKey("properties.id", ondelete="CASCADE"), nullable=False)
-    utility_type = Column(String(20), nullable=False)  # ELECTRICITY, GAS, WATER
+    utility_type = Column(String(50), nullable=False)  # ELECTRICITY, GAS, WATER, COUNCIL_TAX, BROADBAND, ESTATE_SERVICE_CHARGE
     name = Column(String(100), nullable=False)  # e.g., "Standard Variable 2025"
     valid_from = Column(Date, nullable=False, default=date.today)
     valid_to = Column(Date, nullable=True)
@@ -55,10 +55,10 @@ class BillRecord(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     property_id = Column(String(36), ForeignKey("properties.id", ondelete="CASCADE"), nullable=False)
-    utility_type = Column(String(20), nullable=False)  # ELECTRICITY, GAS, WATER
+    utility_type = Column(String(50), nullable=False)  # ELECTRICITY, GAS, WATER, COUNCIL_TAX, BROADBAND, ESTATE_SERVICE_CHARGE
     period_start = Column(Date, nullable=False)
     period_end = Column(Date, nullable=False)
-    total_units = Column(Float, nullable=False)  # Standardized: kWh for electricity & gas, m3 for water
+    total_units = Column(Float, nullable=False)  # Standardized: kWh for electricity & gas, m3 for water, 0 for fixed fees
     raw_meter_units = Column(Float, nullable=True)  # e.g. m3 for gas before conversion
     raw_unit_type = Column(String(20), nullable=True)  # "M3", "KWH"
     total_cost = Column(Float, nullable=False)
@@ -75,7 +75,7 @@ class MeterReading(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     property_id = Column(String(36), ForeignKey("properties.id", ondelete="CASCADE"), nullable=False)
-    utility_type = Column(String(20), nullable=False)  # ELECTRICITY, GAS, WATER
+    utility_type = Column(String(50), nullable=False)  # ELECTRICITY, GAS, WATER, COUNCIL_TAX, BROADBAND, ESTATE_SERVICE_CHARGE
     reading_date = Column(Date, nullable=False)
     meter_index = Column(Float, nullable=False)
     meter_unit = Column(String(20), default="KWH")  # KWH, M3

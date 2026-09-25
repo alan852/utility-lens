@@ -26,7 +26,7 @@ class PropertyResponse(PropertyBase):
 # Tariff Plan Schemas
 class TariffPlanBase(BaseModel):
     property_id: str
-    utility_type: str = Field(..., example="ELECTRICITY")  # ELECTRICITY, GAS, WATER
+    utility_type: str = Field(..., example="ELECTRICITY")  # ELECTRICITY, GAS, WATER, COUNCIL_TAX, BROADBAND, ESTATE_SERVICE_CHARGE
     name: str = Field(..., example="Flexible Standard")
     valid_from: date
     valid_to: Optional[date] = None
@@ -58,10 +58,10 @@ class TariffPlanResponse(TariffPlanBase):
 # Bill Record Schemas
 class BillRecordBase(BaseModel):
     property_id: str
-    utility_type: str = Field(..., example="ELECTRICITY")  # ELECTRICITY, GAS, WATER
+    utility_type: str = Field(..., example="ELECTRICITY")  # ELECTRICITY, GAS, WATER, COUNCIL_TAX, BROADBAND, ESTATE_SERVICE_CHARGE
     period_start: date
     period_end: date
-    total_units: float = Field(..., ge=0, example=350.0)
+    total_units: float = Field(default=0.0, ge=0, example=350.0)
     raw_meter_units: Optional[float] = None
     raw_unit_type: Optional[str] = None
     total_cost: float = Field(..., ge=0, example=95.50)
@@ -95,7 +95,7 @@ class BillRecordResponse(BillRecordBase):
 # Meter Reading Schemas
 class MeterReadingBase(BaseModel):
     property_id: str
-    utility_type: str = Field(..., example="ELECTRICITY")
+    utility_type: str = Field(..., example="ELECTRICITY")  # ELECTRICITY, GAS, WATER, COUNCIL_TAX, BROADBAND, ESTATE_SERVICE_CHARGE
     reading_date: date
     meter_index: float = Field(..., ge=0, example=12450.5)
     meter_unit: str = Field("KWH", example="KWH")
@@ -137,6 +137,9 @@ class MonthlyBreakdownItem(BaseModel):
     electricity_cost: float = 0.0
     gas_cost: float = 0.0
     water_cost: float = 0.0
+    council_tax_cost: float = 0.0
+    broadband_cost: float = 0.0
+    estate_service_charge_cost: float = 0.0
     total_cost: float = 0.0
     electricity_units: float = 0.0  # kWh
     gas_units: float = 0.0          # kWh

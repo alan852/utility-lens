@@ -182,22 +182,22 @@ All database models use SQLAlchemy declarative base in `backend/app/models.py`.
 ### 2. `TariffPlan` (`tariff_plans`)
 - `id`: UUID string (Primary Key)
 - `property_id`: ForeignKey(`properties.id`, cascade on delete)
-- `utility_type`: string (`"ELECTRICITY"`, `"GAS"`, `"WATER"`)
+- `utility_type`: string (`"ELECTRICITY"`, `"GAS"`, `"WATER"`, `"COUNCIL_TAX"`, `"BROADBAND"`, `"ESTATE_SERVICE_CHARGE"`)
 - `name`: string (e.g. `"Octopus Flexible Electric"`)
 - `valid_from`: Date (inclusive start)
 - `valid_to`: Date (nullable end)
 - `unit_rate`: float (£ per kWh or £ per $m^3$)
 - `standing_charge`: float (£ per day)
-- `vat_rate`: float (default `0.05` for 5% UK domestic VAT)
+- `vat_rate`: float (default `0.05` for 5% UK domestic VAT, `0.0` for Water/Council Tax/Service Charge, `0.20` for Broadband)
 - `is_active`: boolean (default `True`)
 
 ### 3. `BillRecord` (`bill_records`)
 - `id`: UUID string (Primary Key)
 - `property_id`: ForeignKey(`properties.id`, cascade on delete)
-- `utility_type`: string (`"ELECTRICITY"`, `"GAS"`, `"WATER"`)
+- `utility_type`: string (`"ELECTRICITY"`, `"GAS"`, `"WATER"`, `"COUNCIL_TAX"`, `"BROADBAND"`, `"ESTATE_SERVICE_CHARGE"`)
 - `period_start`: Date
 - `period_end`: Date
-- `total_units`: float (Standardized: kWh for electricity & gas; $m^3$ for water)
+- `total_units`: float (Standardized: kWh for electricity & gas; $m^3$ for water; 0.0 for fixed services)
 - `raw_meter_units`: float (nullable; original reading before conversion, e.g. $m^3$ gas)
 - `raw_unit_type`: string (nullable; `"M3"`, `"KWH"`)
 - `total_cost`: float (total statement amount)
@@ -327,8 +327,11 @@ When importing backups in `merge` mode:
 ### 2. Color Palettes by Utility
 Maintain consistent visual semantics across tables, badges, and charts:
 - **Electricity**: Amber / Yellow (`text-amber-500`, `bg-amber-500/10`, stroke `#f59e0b`). Icon: `<Zap />`.
-- **Gas**: Orange / Red / Flame (`text-orange-500`, `bg-orange-500/10`, stroke `#f97316`). Icon: `<Flame />`.
+- **Gas**: Orange / Red / Flame (`text-orange-500`, `bg-orange-500/10`, stroke `#ef4444` / `#f97316`). Icon: `<Flame />`.
 - **Water**: Cyan / Blue / Droplets (`text-cyan-500`, `bg-cyan-500/10`, stroke `#06b6d4`). Icon: `<Droplets />`.
+- **Council Tax**: Purple / Violet (`text-purple-500`, `bg-purple-500/10`, stroke `#8b5cf6`). Icon: `<Landmark />`.
+- **Broadband**: Emerald / Green (`text-emerald-500`, `bg-emerald-500/10`, stroke `#10b981`). Icon: `<Wifi />`.
+- **Estate Service Charge**: Pink / Rose (`text-pink-500`, `bg-pink-500/10`, stroke `#ec4899`). Icon: `<ShieldCheck />`.
 
 ### 3. Modal Architecture
 - Modal components reside in `frontend/src/components/Modals/` and `frontend/src/components/CSVImporter/`.

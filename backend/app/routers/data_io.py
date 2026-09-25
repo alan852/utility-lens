@@ -143,6 +143,12 @@ def commit_csv(
                     util = "GAS"
                 elif "WATER" in raw_u:
                     util = "WATER"
+                elif "COUNCIL" in raw_u or "TAX" in raw_u:
+                    util = "COUNCIL_TAX"
+                elif "BROADBAND" in raw_u or "INTERNET" in raw_u or "WIFI" in raw_u:
+                    util = "BROADBAND"
+                elif "SERVICE" in raw_u or "ESTATE" in raw_u:
+                    util = "ESTATE_SERVICE_CHARGE"
                 else:
                     util = raw_u
             elif m.default_utility_type:
@@ -248,9 +254,15 @@ def download_sample_csv():
     writer.writerow(["2025-01-01", "2025-01-31", "ELECTRICITY", "320.5", "17.90", "89.40", "Monthly bill"])
     writer.writerow(["2025-01-01", "2025-01-31", "GAS", "1850.0", "10.09", "131.25", "Winter gas usage"])
     writer.writerow(["2025-01-01", "2025-01-31", "WATER", "9.5", "8.68", "29.11", "Standard water bill"])
+    writer.writerow(["2025-01-01", "2025-01-31", "COUNCIL_TAX", "0", "", "185.00", "Monthly Council Tax Band D"])
+    writer.writerow(["2025-01-01", "2025-01-31", "BROADBAND", "0", "", "35.99", "Fibre broadband"])
+    writer.writerow(["2025-01-01", "2025-01-31", "ESTATE_SERVICE_CHARGE", "0", "", "75.00", "Estate maintenance"])
     writer.writerow(["2025-02-01", "2025-02-28", "ELECTRICITY", "295.0", "16.16", "82.50", "Monthly bill"])
     writer.writerow(["2025-02-01", "2025-02-28", "GAS", "1620.0", "9.11", "116.10", "Winter gas usage"])
     writer.writerow(["2025-02-01", "2025-02-28", "WATER", "8.9", "7.84", "27.42", "Standard water bill"])
+    writer.writerow(["2025-02-01", "2025-02-28", "COUNCIL_TAX", "0", "", "185.00", "Monthly Council Tax Band D"])
+    writer.writerow(["2025-02-01", "2025-02-28", "BROADBAND", "0", "", "35.99", "Fibre broadband"])
+    writer.writerow(["2025-02-01", "2025-02-28", "ESTATE_SERVICE_CHARGE", "0", "", "75.00", "Estate maintenance"])
     
     csv_bytes = output.getvalue().encode("utf-8")
     return Response(

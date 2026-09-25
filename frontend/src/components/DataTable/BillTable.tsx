@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { BillRecord } from '../../types';
-import { Trash2, Pencil, Zap, Flame, Droplets, Filter } from 'lucide-react';
+import { Trash2, Pencil, Zap, Flame, Droplets, Filter, Landmark, Wifi, ShieldCheck } from 'lucide-react';
 import { EditBillModal } from '../Modals/EditBillModal';
 
 export const BillTable: React.FC = () => {
@@ -65,6 +65,9 @@ export const BillTable: React.FC = () => {
             <option value="ELECTRICITY">Electricity Only</option>
             <option value="GAS">Gas Only</option>
             <option value="WATER">Water Only</option>
+            <option value="COUNCIL_TAX">Council Tax Only</option>
+            <option value="BROADBAND">Broadband Only</option>
+            <option value="ESTATE_SERVICE_CHARGE">Estate Service Charge Only</option>
           </select>
         </div>
       </div>
@@ -99,6 +102,10 @@ export const BillTable: React.FC = () => {
               bills.map((b) => {
                 const isElec = b.utility_type === 'ELECTRICITY';
                 const isGas = b.utility_type === 'GAS';
+                const isWater = b.utility_type === 'WATER';
+                const isCouncilTax = b.utility_type === 'COUNCIL_TAX';
+                const isBroadband = b.utility_type === 'BROADBAND';
+                const isServiceCharge = b.utility_type === 'ESTATE_SERVICE_CHARGE';
                 const days = Math.max(1, Math.round((new Date(b.period_end).getTime() - new Date(b.period_start).getTime()) / (1000 * 3600 * 24)));
                 const dailyCost = (b.total_cost / days).toFixed(2);
 
@@ -115,10 +122,20 @@ export const BillTable: React.FC = () => {
                           <Zap className="w-4 h-4 text-amber-500" />
                         ) : isGas ? (
                           <Flame className="w-4 h-4 text-rose-500" />
-                        ) : (
+                        ) : isWater ? (
                           <Droplets className="w-4 h-4 text-cyan-500" />
+                        ) : isCouncilTax ? (
+                          <Landmark className="w-4 h-4 text-purple-500" />
+                        ) : isBroadband ? (
+                          <Wifi className="w-4 h-4 text-emerald-500" />
+                        ) : isServiceCharge ? (
+                          <ShieldCheck className="w-4 h-4 text-pink-500" />
+                        ) : (
+                          <span className="w-4 h-4 rounded-full bg-slate-300 dark:bg-slate-600 inline-block" />
                         )}
-                        <span className="text-slate-800 dark:text-slate-200">{b.utility_type}</span>
+                        <span className="text-slate-800 dark:text-slate-200">
+                          {isCouncilTax ? 'COUNCIL TAX' : isServiceCharge ? 'SERVICE CHARGE' : b.utility_type}
+                        </span>
                       </div>
                     </td>
 
@@ -127,7 +144,15 @@ export const BillTable: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-4 whitespace-nowrap font-medium text-slate-900 dark:text-white">
-                      {b.total_units.toLocaleString()} {isElec || isGas ? 'kWh' : 'm³'}
+                      {isElec || isGas ? (
+                        `${b.total_units.toLocaleString()} kWh`
+                      ) : isWater ? (
+                        `${b.total_units.toLocaleString()} m³`
+                      ) : b.total_units > 0 ? (
+                        `${b.total_units.toLocaleString()} units`
+                      ) : (
+                        <span className="text-slate-400 font-normal">Fixed charge</span>
+                      )}
                       {b.raw_meter_units && (
                         <span className="text-[11px] text-slate-400 block font-normal">
                           (from {b.raw_meter_units} {b.raw_unit_type})

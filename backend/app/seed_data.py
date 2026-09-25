@@ -67,6 +67,36 @@ def seed_demo_data(db: Session, force_reset: bool = False) -> models.Property:
             vat_rate=0.0,
             is_active=True
         ),
+        models.TariffPlan(
+            property_id=prop.id,
+            utility_type="COUNCIL_TAX",
+            name="Bristol City Council Band D",
+            valid_from=date(2024, 1, 1),
+            unit_rate=None,
+            standing_charge=round(185.0 / 30.5, 2),  # ~£6.07 / day
+            vat_rate=0.0,
+            is_active=True
+        ),
+        models.TariffPlan(
+            property_id=prop.id,
+            utility_type="BROADBAND",
+            name="BT Full Fibre 300",
+            valid_from=date(2024, 1, 1),
+            unit_rate=None,
+            standing_charge=round(35.99 / 30.5, 2),  # ~£1.18 / day
+            vat_rate=0.20,
+            is_active=True
+        ),
+        models.TariffPlan(
+            property_id=prop.id,
+            utility_type="ESTATE_SERVICE_CHARGE",
+            name="Harbour Estate Management",
+            valid_from=date(2024, 1, 1),
+            unit_rate=None,
+            standing_charge=round(75.0 / 30.5, 2),  # ~£2.46 / day
+            vat_rate=0.0,
+            is_active=True
+        ),
     ]
     for t in tariffs:
         db.add(t)
@@ -166,6 +196,51 @@ def seed_demo_data(db: Session, force_reset: bool = False) -> models.Property:
             unit_rate_cost=round(w_unit_cost, 2),
             source="SEED_DATA",
             notes="Metered supply & sewerage"
+        ))
+
+        # 4. Council Tax (Band D Bristol)
+        ct_total = 185.00
+        bills.append(models.BillRecord(
+            property_id=prop.id,
+            utility_type="COUNCIL_TAX",
+            period_start=p_start,
+            period_end=p_end,
+            total_units=0.0,
+            total_cost=ct_total,
+            standing_charge_cost=ct_total,
+            unit_rate_cost=0.0,
+            source="SEED_DATA",
+            notes="Council Tax monthly instalment"
+        ))
+
+        # 5. Broadband (BT Full Fibre)
+        bb_total = 35.99
+        bills.append(models.BillRecord(
+            property_id=prop.id,
+            utility_type="BROADBAND",
+            period_start=p_start,
+            period_end=p_end,
+            total_units=0.0,
+            total_cost=bb_total,
+            standing_charge_cost=bb_total,
+            unit_rate_cost=0.0,
+            source="SEED_DATA",
+            notes="Full Fibre 300 broadband"
+        ))
+
+        # 6. Estate Service Charge
+        sc_total = 75.00
+        bills.append(models.BillRecord(
+            property_id=prop.id,
+            utility_type="ESTATE_SERVICE_CHARGE",
+            period_start=p_start,
+            period_end=p_end,
+            total_units=0.0,
+            total_cost=sc_total,
+            standing_charge_cost=sc_total,
+            unit_rate_cost=0.0,
+            source="SEED_DATA",
+            notes="Communal estate grounds & maintenance"
         ))
 
         # Add occasional meter readings

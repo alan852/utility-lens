@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { api } from '../../api/client';
 import { BillRecord, UtilityType, TariffPlan } from '../../types';
-import { Pencil, X, Zap, Flame, Droplets, AlertCircle, Calculator } from 'lucide-react';
+import { Pencil, X, Zap, Flame, Droplets, AlertCircle, Calculator, Landmark, Wifi, ShieldCheck } from 'lucide-react';
 
 interface EditBillModalProps {
   bill: BillRecord | null;
@@ -37,7 +37,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
       setUtilityType(bill.utility_type);
       setPeriodStart(bill.period_start);
       setPeriodEnd(bill.period_end);
-      setTotalUnits(bill.total_units.toString());
+      setTotalUnits(bill.total_units != null ? bill.total_units.toString() : '0');
       setGasUnitType(bill.raw_unit_type === 'M3' ? 'M3' : 'KWH');
       
       const sc = bill.standing_charge_cost != null ? bill.standing_charge_cost.toString() : '';
@@ -53,6 +53,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
   if (!isOpen || !bill) return null;
 
   const curr = currentProperty?.currency_symbol || '£';
+  const isMetered = utilityType === 'ELECTRICITY' || utilityType === 'GAS' || utilityType === 'WATER';
   const activeTariff = tariffs.find((t) => t.utility_type === utilityType && t.is_active);
 
   const handleAutoFillFromTariff = () => {
@@ -105,8 +106,20 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!totalUnits || parseFloat(totalUnits) <= 0) {
+    if (isMetered && (!totalUnits || parseFloat(totalUnits) < 0)) {
       setError('Please enter valid consumption units.');
+      return;
+    }
+
+    const scNum = standingChargeCost !== '' ? parseFloat(standingChargeCost) : undefined;
+    const urNum = usageCost !== '' ? parseFloat(usageCost) : undefined;
+    let costNum = totalCost !== '' ? parseFloat(totalCost) : 0.0;
+    if (costNum === 0 && scNum !== undefined && urNum !== undefined) {
+      costNum = Math.round((scNum + urNum) * 100) / 100;
+    }
+
+    if (!isMetered && costNum <= 0) {
+      setError('Please enter a valid bill amount.');
       return;
     }
 
@@ -114,13 +127,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
     setError(null);
 
     try {
-      const unitsNum = parseFloat(totalUnits);
-      const scNum = standingChargeCost !== '' ? parseFloat(standingChargeCost) : undefined;
-      const urNum = usageCost !== '' ? parseFloat(usageCost) : undefined;
-      let costNum = totalCost !== '' ? parseFloat(totalCost) : 0.0;
-      if (costNum === 0 && scNum !== undefined && urNum !== undefined) {
-        costNum = Math.round((scNum + urNum) * 100) / 100;
-      }
+      const unitsNum = isMetered ? parseFloat(totalUnits) : (parseFloat(totalUnits) || 0.0);
 
       await api.updateBill(bill.id, {
         utility_type: utilityType,
@@ -183,7 +190,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
               <button
                 type="button"
                 onClick={() => setUtilityType('ELECTRICITY')}
-                className={`flex items-center justify-center py-2 px-3 rounded-lg text-xs font-medium border transition ${
+                className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
                   utilityType === 'ELECTRICITY'
                     ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold'
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
@@ -196,7 +203,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
               <button
                 type="button"
                 onClick={() => setUtilityType('GAS')}
-                className={`flex items-center justify-center py-2 px-3 rounded-lg text-xs font-medium border transition ${
+                className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
                   utilityType === 'GAS'
                     ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 font-bold'
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
@@ -209,7 +216,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
               <button
                 type="button"
                 onClick={() => setUtilityType('WATER')}
-                className={`flex items-center justify-center py-2 px-3 rounded-lg text-xs font-medium border transition ${
+                className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
                   utilityType === 'WATER'
                     ? 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 font-bold'
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
@@ -217,6 +224,45 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
               >
                 <Droplets className="w-3.5 h-3.5 mr-1 text-cyan-500" />
                 Water
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setUtilityType('COUNCIL_TAX')}
+                className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
+                  utilityType === 'COUNCIL_TAX'
+                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-bold'
+                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <Landmark className="w-3.5 h-3.5 mr-1 text-purple-500" />
+                Council Tax
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setUtilityType('BROADBAND')}
+                className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
+                  utilityType === 'BROADBAND'
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold'
+                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <Wifi className="w-3.5 h-3.5 mr-1 text-emerald-500" />
+                Broadband
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setUtilityType('ESTATE_SERVICE_CHARGE')}
+                className={`flex items-center justify-center py-2 px-2.5 rounded-lg text-xs font-medium border transition ${
+                  utilityType === 'ESTATE_SERVICE_CHARGE'
+                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 font-bold'
+                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5 mr-1 text-pink-500" />
+                Service Charge
               </button>
             </div>
           </div>
@@ -249,52 +295,59 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
             </div>
           </div>
 
-          {/* Consumption Amount & Units */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
-                Consumption Amount
-              </label>
-              {utilityType === 'GAS' && (
-                <div className="flex items-center space-x-1 text-[11px]">
-                  <span className="text-slate-400">Meter unit:</span>
-                  <button
-                    type="button"
-                    onClick={() => setGasUnitType('KWH')}
-                    className={`px-1.5 py-0.5 rounded ${gasUnitType === 'KWH' ? 'bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 font-bold' : 'text-slate-500'}`}
-                  >
-                    kWh
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGasUnitType('M3')}
-                    className={`px-1.5 py-0.5 rounded ${gasUnitType === 'M3' ? 'bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 font-bold' : 'text-slate-500'}`}
-                  >
-                    m³
-                  </button>
-                </div>
+          {/* Consumption Amount & Units (Only for metered utilities) */}
+          {isMetered ? (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Consumption Amount
+                </label>
+                {utilityType === 'GAS' && (
+                  <div className="flex items-center space-x-1 text-[11px]">
+                    <span className="text-slate-400">Meter unit:</span>
+                    <button
+                      type="button"
+                      onClick={() => setGasUnitType('KWH')}
+                      className={`px-1.5 py-0.5 rounded ${gasUnitType === 'KWH' ? 'bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 font-bold' : 'text-slate-500'}`}
+                    >
+                      kWh
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGasUnitType('M3')}
+                      className={`px-1.5 py-0.5 rounded ${gasUnitType === 'M3' ? 'bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300 font-bold' : 'text-slate-500'}`}
+                    >
+                      m³
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  placeholder={utilityType === 'WATER' ? 'e.g. 9.5' : 'e.g. 320'}
+                  value={totalUnits}
+                  onChange={(e) => setTotalUnits(e.target.value)}
+                  className="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 pr-14"
+                />
+                <span className="absolute right-3 top-2.5 text-xs font-medium text-slate-400">
+                  {utilityType === 'WATER' ? 'm³' : (utilityType === 'GAS' && gasUnitType === 'M3' ? 'm³' : 'kWh')}
+                </span>
+              </div>
+              {utilityType === 'GAS' && gasUnitType === 'M3' && totalUnits && (
+                <p className="text-[11px] text-sky-600 dark:text-sky-400">
+                  ≈ {Math.round(parseFloat(totalUnits) * 11.36)} kWh standard calorific energy
+                </p>
               )}
             </div>
-            <div className="relative">
-              <input
-                type="number"
-                step="0.01"
-                required
-                placeholder={utilityType === 'WATER' ? 'e.g. 9.5' : 'e.g. 320'}
-                value={totalUnits}
-                onChange={(e) => setTotalUnits(e.target.value)}
-                className="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 pr-14"
-              />
-              <span className="absolute right-3 top-2.5 text-xs font-medium text-slate-400">
-                {utilityType === 'WATER' ? 'm³' : (utilityType === 'GAS' && gasUnitType === 'M3' ? 'm³' : 'kWh')}
-              </span>
+          ) : (
+            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+              <span>Fixed periodic charge • metered consumption not required</span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Flat rate</span>
             </div>
-            {utilityType === 'GAS' && gasUnitType === 'M3' && totalUnits && (
-              <p className="text-[11px] text-sky-600 dark:text-sky-400">
-                ≈ {Math.round(parseFloat(totalUnits) * 11.36)} kWh standard calorific energy
-              </p>
-            )}
-          </div>
+          )}
 
           {/* Cost Breakdown (Separating UK Standing Charge) */}
           <div className="space-y-2.5 pt-1">

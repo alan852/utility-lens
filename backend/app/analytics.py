@@ -18,7 +18,14 @@ def compute_kpis(db: Session, property_id: str) -> schemas.KPISummaryResponse:
             previous_month_spend=0.0,
             month_over_month_change_pct=None,
             daily_avg_spend=0.0,
-            spend_by_utility_trailing_12m={"ELECTRICITY": 0.0, "GAS": 0.0, "WATER": 0.0},
+            spend_by_utility_trailing_12m={
+                "ELECTRICITY": 0.0,
+                "GAS": 0.0,
+                "WATER": 0.0,
+                "COUNCIL_TAX": 0.0,
+                "BROADBAND": 0.0,
+                "ESTATE_SERVICE_CHARGE": 0.0,
+            },
             currency_symbol=currency
         )
 
@@ -53,8 +60,14 @@ def compute_kpis(db: Session, property_id: str) -> schemas.KPISummaryResponse:
         spend_by_util = {
             "ELECTRICITY": round(float(util_t12.get("ELECTRICITY", 0.0)), 2),
             "GAS": round(float(util_t12.get("GAS", 0.0)), 2),
-            "WATER": round(float(util_t12.get("WATER", 0.0)), 2)
+            "WATER": round(float(util_t12.get("WATER", 0.0)), 2),
+            "COUNCIL_TAX": round(float(util_t12.get("COUNCIL_TAX", 0.0)), 2),
+            "BROADBAND": round(float(util_t12.get("BROADBAND", 0.0)), 2),
+            "ESTATE_SERVICE_CHARGE": round(float(util_t12.get("ESTATE_SERVICE_CHARGE", 0.0)), 2),
         }
+        for k, v in util_t12.items():
+            if k not in spend_by_util:
+                spend_by_util[k] = round(float(v), 2)
 
         # Current vs previous month
         current_spend = round(float(monthly_total.get(latest_period, 0.0)), 2)
@@ -74,7 +87,14 @@ def compute_kpis(db: Session, property_id: str) -> schemas.KPISummaryResponse:
         prev_spend = 0.0
         mom_pct = None
         daily_avg = 0.0
-        spend_by_util = {"ELECTRICITY": 0.0, "GAS": 0.0, "WATER": 0.0}
+        spend_by_util = {
+            "ELECTRICITY": 0.0,
+            "GAS": 0.0,
+            "WATER": 0.0,
+            "COUNCIL_TAX": 0.0,
+            "BROADBAND": 0.0,
+            "ESTATE_SERVICE_CHARGE": 0.0,
+        }
 
     return schemas.KPISummaryResponse(
         total_spend_trailing_12m=total_t12_spend,
@@ -117,6 +137,9 @@ def compute_monthly_breakdown(db: Session, property_id: str, months_lookback: in
     combined["electricity_cost"] = pivoted_cost.get("ELECTRICITY", 0.0)
     combined["gas_cost"] = pivoted_cost.get("GAS", 0.0)
     combined["water_cost"] = pivoted_cost.get("WATER", 0.0)
+    combined["council_tax_cost"] = pivoted_cost.get("COUNCIL_TAX", 0.0)
+    combined["broadband_cost"] = pivoted_cost.get("BROADBAND", 0.0)
+    combined["estate_service_charge_cost"] = pivoted_cost.get("ESTATE_SERVICE_CHARGE", 0.0)
     combined["electricity_units"] = pivoted_units.get("ELECTRICITY", 0.0)
     combined["gas_units"] = pivoted_units.get("GAS", 0.0)
     combined["water_units"] = pivoted_units.get("WATER", 0.0)
@@ -126,7 +149,10 @@ def compute_monthly_breakdown(db: Session, property_id: str, months_lookback: in
     result_items = []
     for (year, month, label), row in combined.iterrows():
         days = calendar.monthrange(int(year), int(month))[1]
-        tot_cost = round(float(row["electricity_cost"] + row["gas_cost"] + row["water_cost"]), 2)
+        tot_cost = round(float(
+            row["electricity_cost"] + row["gas_cost"] + row["water_cost"] +
+            row["council_tax_cost"] + row["broadband_cost"] + row["estate_service_charge_cost"]
+        ), 2)
         daily_avg = round(tot_cost / days, 2)
 
         result_items.append(schemas.MonthlyBreakdownItem(
@@ -136,6 +162,9 @@ def compute_monthly_breakdown(db: Session, property_id: str, months_lookback: in
             electricity_cost=round(float(row["electricity_cost"]), 2),
             gas_cost=round(float(row["gas_cost"]), 2),
             water_cost=round(float(row["water_cost"]), 2),
+            council_tax_cost=round(float(row["council_tax_cost"]), 2),
+            broadband_cost=round(float(row["broadband_cost"]), 2),
+            estate_service_charge_cost=round(float(row["estate_service_charge_cost"]), 2),
             total_cost=tot_cost,
             electricity_units=round(float(row["electricity_units"]), 1),
             gas_units=round(float(row["gas_units"]), 1),
