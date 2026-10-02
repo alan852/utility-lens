@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    
+    <linearGradient id="lightningGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+
+    <linearGradient id="flameGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fb923c"/>
+      <stop offset="50%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+
+    <linearGradient id="flameInnerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+
+    <linearGradient id="waterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7dd3fc"/>
+      <stop offset="50%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+
+    <!-- Subtle Glow Filter -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Group for entire icon, transparent background -->
+  <g id="utility-lens-icon">
+    <!-- Outer Aperture Ring (Double concentric rings with shutter markings) -->
+    <!-- Outer primary ring -->
+    <circle cx="256" cy="256" r="230" fill="none" stroke="url(#ringGrad)" stroke-width="12" stroke-linecap="round"/>
+    
+    <!-- Inner guiding ring -->
+    <circle cx="256" cy="256" r="202" fill="none" stroke="url(#ringGrad)" stroke-width="6" stroke-opacity="0.85"/>
+
+    <!-- Aperture Shutter Blades (8 lens iris slats connecting the rings) -->
+    <!-- Angles: 0, 45, 90, 135, 180, 225, 270, 315 -->
+    <!-- Tangent lines connecting outer circle at theta to inner circle at theta + 25 deg -->
+    <!-- Slats drawn with clean geometry -->
+    <path d="
+      M 486 256 L 399 375
+      M 419 419 L 256 458
+      M 256 486 L 113 399
+      M 93 419 L 54 256
+      M 26 256 L 113 137
+      M 93 93 L 256 54
+      M 256 26 L 399 113
+      M 419 93 L 458 256
+    " fill="none" stroke="url(#ringGrad)" stroke-width="5" stroke-linecap="round" stroke-opacity="0.75"/>
+
+    <!-- Central Triad: Electricity, Gas, Water -->
+
+    <!-- 1. ELECTRICITY (Lightning Bolt - Top Center) -->
+    <g transform="translate(0, -6)">
+      <!-- Drop shadow / ambient glow -->
+      <polygon points="274,80 220,192 258,192 238,272 298,162 260,162"
+               fill="url(#lightningGrad)" 
+               filter="url(#neonGlow)"/>
+      <!-- Crisp vector overlay -->
+      <polygon points="274,80 220,192 258,192 238,272 298,162 260,162"
+               fill="url(#lightningGrad)"
+               stroke="#fef08a"
+               stroke-width="2"
+               stroke-linejoin="round"/>
+    </g>
+
+    <!-- 2. GAS (Natural Gas Flame - Bottom Left) -->
+    <g transform="translate(180, 350)">
+      <!-- Outer flame -->
+      <path d="M 0,-85 
+               C 15,-55 45,-25 45,15 
+               C 45,45 22,65 -5,65 
+               C -35,65 -55,42 -55,10 
+               C -55,-25 -30,-50 -25,-60 
+               C -20,-45 -10,-40 -5,-45 
+               C 5,-55 -5,-70 0,-85 Z"
+            fill="url(#flameGrad)"
+            filter="url(#neonGlow)"/>
+      <path d="M 0,-85 
+               C 15,-55 45,-25 45,15 
+               C 45,45 22,65 -5,65 
+               C -35,65 -55,42 -55,10 
+               C -55,-25 -30,-50 -25,-60 
+               C -20,-45 -10,-40 -5,-45 
+               C 5,-55 -5,-70 0,-85 Z"
+            fill="url(#flameGrad)"
+            stroke="#fdba74"
+            stroke-width="2"
+            stroke-linejoin="round"/>
+      <!-- Inner core flame -->
+      <path d="M -3,-20 
+               C 5,-5 20,10 20,28 
+               C 20,44 8,52 -6,52 
+               C -20,52 -30,40 -30,22 
+               C -30,5 -18,-10 -15,-15 
+               C -12,-5 -7,0 -3,-20 Z"
+            fill="url(#flameInnerGrad)"/>
+    </g>
+
+    <!-- 3. WATER (Water Droplet - Bottom Right) -->
+    <g transform="translate(332, 350)">
+      <!-- Outer water drop -->
+      <path d="M 0,-85 
+               C 2,-78 48,-15 48,20 
+               C 48,50 25,65 0,65 
+               C -25,65 -48,50 -48,20 
+               C -48,-15 -2,-78 0,-85 Z"
+            fill="url(#waterGrad)"
+            filter="url(#neonGlow)"/>
+      <path d="M 0,-85 
+               C 2,-78 48,-15 48,20 
+               C 48,50 25,65 0,65 
+               C -25,65 -48,50 -48,20 
+               C -48,-15 -2,-78 0,-85 Z"
+            fill="url(#waterGrad)"
+            stroke="#bae6fd"
+            stroke-width="2"
+            stroke-linejoin="round"/>
+      <!-- Curved specular shine highlight -->
+      <path d="M -22,8 
+               C -22,-10 -6,-38 2,-50 
+               C -1,-40 -12,-15 -12,8 
+               C -12,18 -7,26 -2,32 
+               C -10,28 -22,22 -22,8 Z"
+            fill="#ffffff"
+            fill-opacity="0.65"/>
+      <!-- Bottom droplet reflection dot -->
+      <ellipse cx="14" cy="36" rx="5" ry="3.5" transform="rotate(-30 14 36)" fill="#ffffff" fill-opacity="0.6"/>
+    </g>
+  </g>
+</svg>

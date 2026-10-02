@@ -87,9 +87,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Logo & Title */}
           <div className="flex items-center space-x-3">
             <img 
-              src="/icon.png" 
+              src="/icon.svg" 
               alt="UtilityLens Logo" 
-              className="w-9 h-9 rounded-xl shadow-md border border-slate-200/50 dark:border-slate-700/50 object-cover" 
+              className="w-8 h-8 object-contain" 
             />
             <div>
               <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">
