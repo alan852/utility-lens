@@ -53,7 +53,7 @@ docker compose up --build
 
 ### 3. Environment Variables
 You can customize options via `.env` (copy from `.env.example`):
-- `node` / `NODE`: Set to `production` to prevent automatic demo data generation when the database is empty (in default `development` mode, a realistic 18-month demo dataset is automatically loaded on initial start).
+- `NODE_ENV`: Set to `production` to prevent automatic demo data generation when the database is empty (in default `development` mode, a realistic 18-month demo dataset is automatically loaded on initial start).
 - `VITE_ALLOWED_HOSTS` / `ALLOWED_HOSTS`: Configures Vite's `server.allowedHosts` for dev and preview servers. Set to `true` or `all` to allow all incoming host headers (useful behind reverse proxies, Tailscale, Cloudflare tunnels, or LAN IPs), or provide a comma-separated list of hostnames (e.g. `localhost,myhost.lan,utility.example.com`).
 - `VITE_API_URL`: Backend proxy URL for Vite dev server (default: `http://backend:8000`).
 - `DATABASE_URL`: SQLAlchemy SQLite database path (default: `sqlite:////app/data/utilities.db` in Docker).
