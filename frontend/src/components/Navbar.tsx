@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../api/client';
 import { 
-  Zap, 
   BarChart3, 
   Receipt, 
   Gauge, 
@@ -87,9 +86,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center justify-between h-16">
           {/* Logo & Title */}
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 text-white shadow-md">
-              <Zap className="w-5 h-5" />
-            </div>
+            <img 
+              src="/icon.png" 
+              alt="UtilityLens Logo" 
+              className="w-9 h-9 rounded-xl shadow-md border border-slate-200/50 dark:border-slate-700/50 object-cover" 
+            />
             <div>
               <span className="font-bold text-lg text-slate-900 dark:text-white tracking-tight">
                 Utility<span className="text-sky-500">Lens</span>
