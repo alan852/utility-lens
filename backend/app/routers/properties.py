@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from sqlalchemy.orm import Session
 from ..database import get_db
+from ..config import settings
 from .. import crud, schemas
 
 router = APIRouter(prefix="/api/properties", tags=["Properties"])
@@ -9,8 +10,8 @@ router = APIRouter(prefix="/api/properties", tags=["Properties"])
 @router.get("", response_model=List[schemas.PropertyResponse])
 def read_properties(db: Session = Depends(get_db)):
     props = crud.get_properties(db)
-    # If no property exists, seed initial demo property
-    if not props:
+    # If no property exists and not in production, seed initial demo property
+    if not props and not settings.is_production:
         from ..seed_data import seed_demo_data
         seed_demo_data(db, force_reset=False)
         props = crud.get_properties(db)

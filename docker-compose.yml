@@ -12,6 +12,8 @@ services:
     environment:
       - DATABASE_URL=sqlite:////app/data/utilities.db
       - PYTHONUNBUFFERED=1
+      - NODE=${NODE:-${node:-development}}
+      - node=${node:-${NODE:-development}}
     restart: unless-stopped
 
   frontend:

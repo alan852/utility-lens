@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base, SessionLocal, DATABASE_URL
+from .config import settings
 from .routers import properties, tariffs, bills, meter_readings, analytics, data_io
 from .seed_data import seed_demo_data
 
@@ -70,6 +71,8 @@ app.include_router(data_io.router)
 
 @app.on_event("startup")
 def on_startup():
+    if settings.is_production:
+        return
     db = SessionLocal()
     try:
         # Seed initial demo property & realistic records if DB is empty

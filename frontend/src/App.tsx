@@ -38,7 +38,14 @@ export const App: React.FC = () => {
 
   const loadDashboardData = async () => {
     const propParam = selectedPropertyIds.length > 0 ? selectedPropertyIds : (currentProperty ? [currentProperty.id] : []);
-    if (propParam.length === 0) return;
+    if (propParam.length === 0) {
+      setLoading(false);
+      setKpis(null);
+      setMonthlyData(null);
+      setYoyData(null);
+      setBaseloadData(null);
+      return;
+    }
     setLoading(true);
     try {
       const [kpiRes, monthlyRes, yoyRes, baseloadRes] = await Promise.all([
