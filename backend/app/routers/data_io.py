@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Respons
 from sqlalchemy.orm import Session
 from dateutil import parser as date_parser
 from ..database import get_db
+from ..config import settings
 from .. import crud, schemas, models
 from ..seed_data import seed_demo_data
 
@@ -278,6 +279,11 @@ def download_sample_csv():
 
 @router.post("/seed-demo")
 def seed_demo_data_endpoint(force: bool = True, db: Session = Depends(get_db)):
+    if settings.is_production:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo data loading is disabled in production mode"
+        )
     prop = seed_demo_data(db, force_reset=force)
     return {"message": "Demo dataset loaded successfully", "property_id": prop.id, "property_name": prop.name}
 

@@ -28,6 +28,8 @@ services:
     environment:
       - VITE_API_URL=http://backend:8000
       - VITE_ALLOWED_HOSTS=${VITE_ALLOWED_HOSTS:-${ALLOWED_HOSTS:-}}
+      - NODE_ENV=${NODE_ENV:-development}
+      - VITE_NODE_ENV=${NODE_ENV:-development}
     depends_on:
       - backend
     restart: unless-stopped

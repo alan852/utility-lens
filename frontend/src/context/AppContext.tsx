@@ -18,6 +18,7 @@ interface AppContextType {
   toggleDarkMode: () => void;
   activeTab: 'dashboard' | 'bills' | 'readings' | 'simulator' | 'baseload';
   setActiveTab: (tab: 'dashboard' | 'bills' | 'readings' | 'simulator' | 'baseload') => void;
+  isProduction: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -28,6 +29,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'bills' | 'readings' | 'simulator' | 'baseload'>('dashboard');
+  const [isProduction, setIsProduction] = useState<boolean>(() => {
+    return (
+      import.meta.env.VITE_NODE_ENV === 'production' ||
+      import.meta.env.MODE === 'production'
+    );
+  });
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('theme') === 'dark' || 
       (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -42,6 +49,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('theme', 'light');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    api.getConfig().then((cfg) => {
+      if (cfg && typeof cfg.is_production === 'boolean') {
+        setIsProduction(cfg.is_production);
+      }
+    }).catch((err) => {
+      console.warn('Could not fetch app config:', err);
+    });
+  }, []);
 
   const toggleDarkMode = () => setIsDarkMode(prev => !prev);
 
@@ -109,6 +126,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleDarkMode,
         activeTab,
         setActiveTab,
+        isProduction,
       }}
     >
       {children}

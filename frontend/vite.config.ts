@@ -16,6 +16,9 @@ const allowedHosts = parseAllowedHosts();
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_NODE_ENV': JSON.stringify(process.env.VITE_NODE_ENV || process.env.NODE_ENV || 'development'),
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,

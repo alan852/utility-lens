@@ -49,7 +49,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     isDarkMode, 
     toggleDarkMode,
     activeTab,
-    setActiveTab
+    setActiveTab,
+    isProduction
   } = useApp();
 
   const [loadingSeed, setLoadingSeed] = useState(false);
@@ -67,6 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, []);
 
   const handleSeedDemo = async () => {
+    if (isProduction) return;
     if (confirm("Load realistic UK 18-month demo dataset for testing? This will populate sample electricity, gas, and water data.")) {
       try {
         setLoadingSeed(true);
@@ -252,9 +254,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Seed Demo Data button */}
             <button
               onClick={handleSeedDemo}
-              disabled={loadingSeed}
-              title="Load Realistic 18-Month Demo Data"
-              className="p-2 text-slate-500 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              disabled={loadingSeed || isProduction}
+              title={isProduction ? "Demo data loading is disabled in production (NODE_ENV=production)" : "Load Realistic 18-Month Demo Data"}
+              className={`p-2 rounded-lg transition ${
+                isProduction
+                  ? "opacity-30 cursor-not-allowed text-slate-400 dark:text-slate-600"
+                  : "text-slate-500 hover:text-amber-600 dark:text-slate-400 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              }`}
             >
               <Database className="w-4 h-4" />
             </button>

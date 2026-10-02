@@ -259,9 +259,18 @@ export const api = {
     return res.json();
   },
 
+  async getConfig(): Promise<{ node_env: string; is_production: boolean }> {
+    const res = await fetch(`${API_BASE}/config`);
+    if (!res.ok) throw new Error('Failed to load system config');
+    return res.json();
+  },
+
   async seedDemoData(): Promise<{ message: string; property_id: string }> {
     const res = await fetch(`${API_BASE}/data-io/seed-demo`, { method: 'POST' });
-    if (!res.ok) throw new Error('Failed to seed demo data');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to seed demo data' }));
+      throw new Error(err.detail || 'Failed to seed demo data');
+    }
     return res.json();
   },
 

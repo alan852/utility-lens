@@ -82,4 +82,16 @@ def on_startup():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "utility-lens-api"}
+    return {
+        "status": "ok", 
+        "service": "utility-lens-api",
+        "node_env": settings.node_env,
+        "is_production": settings.is_production
+    }
+
+@app.get("/api/config")
+def get_config():
+    return {
+        "node_env": settings.node_env,
+        "is_production": settings.is_production
+    }
