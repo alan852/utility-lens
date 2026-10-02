@@ -26,6 +26,7 @@ services:
       - /app/node_modules
     environment:
       - VITE_API_URL=http://backend:8000
+      - VITE_ALLOWED_HOSTS=${VITE_ALLOWED_HOSTS:-${ALLOWED_HOSTS:-}}
     depends_on:
       - backend
     restart: unless-stopped

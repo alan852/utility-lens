@@ -51,6 +51,12 @@ docker compose up --build
 - **Frontend Dashboard**: [http://localhost:5173](http://localhost:5173)
 - **FastAPI Backend & Interactive API Docs (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
+### 3. Environment Variables
+You can customize options via `.env` (copy from `.env.example`):
+- `VITE_ALLOWED_HOSTS` / `ALLOWED_HOSTS`: Configures Vite's `server.allowedHosts` for dev and preview servers. Set to `true` or `all` to allow all incoming host headers (useful behind reverse proxies, Tailscale, Cloudflare tunnels, or LAN IPs), or provide a comma-separated list of hostnames (e.g. `localhost,myhost.lan,utility.example.com`).
+- `VITE_API_URL`: Backend proxy URL for Vite dev server (default: `http://backend:8000`).
+- `DATABASE_URL`: SQLAlchemy SQLite database path (default: `sqlite:////app/data/utilities.db` in Docker).
+
 ---
 
 ## 📁 Project Structure
