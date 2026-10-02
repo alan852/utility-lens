@@ -46,8 +46,8 @@ def check_and_migrate_db():
 check_and_migrate_db()
 
 app = FastAPI(
-    title="Home Utility Analysis API",
-    description="Backend API for tracking and analyzing household electricity, gas, and water utilities.",
+    title="UtilityLens API",
+    description="Backend API for tracking and analyzing household utilities (Electricity, Gas, Water, Council Tax, Broadband, Service Charges).",
     version="1.0.0"
 )
 
@@ -79,4 +79,4 @@ def on_startup():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "home-utility-analysis-api"}
+    return {"status": "ok", "service": "utility-lens-api"}

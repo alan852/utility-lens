@@ -2,7 +2,7 @@
 set -e
 
 echo "=========================================="
-echo "⚡ Starting Home Utility Analysis (UtilityLens)"
+echo "⚡ Starting UtilityLens"
 echo "=========================================="
 
 if command -v docker &> /dev/null && docker compose version &> /dev/null; then

@@ -1,6 +1,6 @@
 # 🤖 AGENTS.md — AI Agent Operating Manual & Architecture Guide
 
-Welcome to **UtilityLens (Home Utility Analysis)**. This repository is an end-to-end, local-first web application designed to track, analyze, and optimize household utility consumption and expenditure across **Electricity**, **Natural Gas**, and **Water**.
+Welcome to **UtilityLens**. This repository is an end-to-end, local-first web application designed to track, analyze, and optimize household utility consumption and expenditure across **Electricity**, **Natural Gas**, and **Water**.
 
 This document serves as the single source of truth for AI agents (and human developers) inspecting, modifying, or extending this codebase. Follow the conventions, business rules, and patterns outlined below.
 
@@ -48,7 +48,7 @@ This document serves as the single source of truth for AI agents (and human deve
 ## 📁 Repository Structure
 
 ```
-home-utility-analysis/
+utility-lens/
 ├── backend/
 │   ├── app/
 │   │   ├── __init__.py

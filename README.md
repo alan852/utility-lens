@@ -1,4 +1,4 @@
-# ⚡ UtilityLens — Home Utility Analysis
+# ⚡ UtilityLens
 
 A modern, local-first web application designed to track, analyze, and optimize household utility consumption and expenditure across **Electricity**, **Natural Gas**, **Water**, **Council Tax**, **Broadband**, and **Estate Service Charges**.
 
@@ -56,7 +56,7 @@ docker compose up --build
 ## 📁 Project Structure
 
 ```
-home-utility-analysis/
+utility-lens/
 ├── backend/
 │   ├── app/
 │   │   ├── analytics.py        # Pandas/NumPy analytics, YoY, baseload, and simulator

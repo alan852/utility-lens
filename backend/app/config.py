@@ -3,7 +3,7 @@ from typing import Optional
 import os
 
 class Settings(BaseSettings):
-    app_name: str = "Home Utility Analysis API"
+    app_name: str = "UtilityLens API"
     environment: str = "development"
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./utilities.db")
     
