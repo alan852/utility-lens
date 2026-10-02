@@ -48,7 +48,7 @@ check_and_migrate_db()
 app = FastAPI(
     title="UtilityLens API",
     description="Backend API for tracking and analyzing household utilities (Electricity, Gas, Water, Council Tax, Broadband, Service Charges).",
-    version="1.0.1"
+    version="1.0.2"
 )
 
 # Enable CORS for local dev and docker containers
