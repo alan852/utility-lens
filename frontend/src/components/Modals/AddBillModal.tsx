@@ -25,6 +25,7 @@ interface AddBillModalProps {
   onClose: () => void;
   initialMode?: 'single' | 'recurring';
   initialUtilityType?: UtilityType;
+  initialPropertyId?: string;
 }
 
 const formatLocalDate = (year: number, month: number, day: number): string => {
@@ -37,9 +38,10 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
   isOpen, 
   onClose,
   initialMode = 'single',
-  initialUtilityType = 'ELECTRICITY'
+  initialUtilityType = 'ELECTRICITY',
+  initialPropertyId
 }) => {
-  const { properties, triggerRefresh } = useApp();
+  const { properties, currentProperty, triggerRefresh } = useApp();
 
   // Mode: Single statement vs Recurring contract
   const [entryMode, setEntryMode] = useState<'single' | 'recurring'>(initialMode);
@@ -85,7 +87,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Initialize selected property defaulting to last record
+  // Initialize selected property defaulting to initialPropertyId, currentProperty, last saved, or first property
   useEffect(() => {
     if (!isOpen || properties.length === 0) return;
 
@@ -94,26 +96,25 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
     setError(null);
     setSuccessMessage(null);
 
-    const initProperty = async () => {
-      let defaultId = localStorage.getItem('last_bill_property_id');
-      if (!defaultId || !properties.some(p => p.id === defaultId)) {
-        try {
-          const recentBills = await api.getBills();
-          if (recentBills.length > 0 && recentBills[0].property_id && properties.some(p => p.id === recentBills[0].property_id)) {
-            defaultId = recentBills[0].property_id;
-          }
-        } catch (e) {
-          // Fallback to first property
+    const initProperty = () => {
+      let defaultId = '';
+      if (initialPropertyId && properties.some(p => p.id === initialPropertyId)) {
+        defaultId = initialPropertyId;
+      } else if (currentProperty?.id && properties.some(p => p.id === currentProperty.id)) {
+        defaultId = currentProperty.id;
+      } else {
+        const savedId = localStorage.getItem('last_bill_property_id');
+        if (savedId && properties.some(p => p.id === savedId)) {
+          defaultId = savedId;
+        } else {
+          defaultId = properties[0]?.id || '';
         }
-      }
-      if (!defaultId || !properties.some(p => p.id === defaultId)) {
-        defaultId = properties[0]?.id || '';
       }
       setSelectedPropertyId(defaultId);
     };
 
     initProperty();
-  }, [isOpen, properties, initialMode, initialUtilityType]);
+  }, [isOpen, properties, initialMode, initialUtilityType, initialPropertyId, currentProperty?.id]);
 
   useEffect(() => {
     if (isOpen && selectedPropertyId) {
@@ -166,7 +167,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
     if (!activeTariff || !isMetered) return;
     const start = new Date(periodStart).getTime();
     const end = new Date(periodEnd).getTime();
-    const days = Math.max(1, Math.round((end - start) / (1000 * 3600 * 24)));
+    const days = Math.max(1, Math.round((end - start) / (1000 * 3600 * 24)) + 1);
     const vatMult = 1.0 + (activeTariff.vat_rate || 0.05);
 
     const scVal = Math.round(days * activeTariff.standing_charge * vatMult * 100) / 100;
@@ -478,7 +479,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
           )}
 
           {/* Property Selection */}
-          {properties.length > 1 && (
+          {properties.length > 0 ? (
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Property *
@@ -494,6 +495,10 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                   </option>
                 ))}
               </select>
+            </div>
+          ) : (
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
+              No properties found. Please create a property before recording a bill.
             </div>
           )}
 
@@ -969,7 +974,7 @@ export const AddBillModal: React.FC<AddBillModalProps> = ({
                   <div className="relative">
                     <input
                       type="number"
-                      step="0.01"
+                      step="any"
                       required
                       placeholder={utilityType === 'WATER' ? 'e.g. 9.5' : 'e.g. 320'}
                       value={totalUnits}

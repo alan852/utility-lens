@@ -74,7 +74,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
     if (!activeTariff || !isMetered) return;
     const start = new Date(periodStart).getTime();
     const end = new Date(periodEnd).getTime();
-    const days = Math.max(1, Math.round((end - start) / (1000 * 3600 * 24)));
+    const days = Math.max(1, Math.round((end - start) / (1000 * 3600 * 24)) + 1);
     const vatMult = 1.0 + (activeTariff.vat_rate || 0.05);
 
     const scVal = Math.round(days * activeTariff.standing_charge * vatMult * 100) / 100;
@@ -339,7 +339,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({ bill, isOpen, onCl
               <div className="relative">
                 <input
                   type="number"
-                  step="0.01"
+                  step="any"
                   required
                   placeholder={utilityType === 'WATER' ? 'e.g. 9.5' : 'e.g. 320'}
                   value={totalUnits}

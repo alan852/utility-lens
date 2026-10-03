@@ -98,7 +98,7 @@ export const TariffSimulator: React.FC = () => {
               </label>
               <input
                 type="number"
-                step="0.001"
+                step="any"
                 value={elecUnitRate}
                 onChange={(e) => setElecUnitRate(parseFloat(e.target.value) || 0)}
                 className="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 focus:ring-1 focus:ring-sky-500"
@@ -111,7 +111,7 @@ export const TariffSimulator: React.FC = () => {
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="any"
                 value={elecStandingCharge}
                 onChange={(e) => setElecStandingCharge(parseFloat(e.target.value) || 0)}
                 className="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 focus:ring-1 focus:ring-sky-500"
@@ -131,7 +131,7 @@ export const TariffSimulator: React.FC = () => {
               </label>
               <input
                 type="number"
-                step="0.001"
+                step="any"
                 value={gasUnitRate}
                 onChange={(e) => setGasUnitRate(parseFloat(e.target.value) || 0)}
                 className="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 focus:ring-1 focus:ring-sky-500"
@@ -144,7 +144,7 @@ export const TariffSimulator: React.FC = () => {
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="any"
                 value={gasStandingCharge}
                 onChange={(e) => setGasStandingCharge(parseFloat(e.target.value) || 0)}
                 className="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 focus:ring-1 focus:ring-sky-500"

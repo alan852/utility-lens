@@ -286,9 +286,9 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
                   </label>
                   <input
                     type="number"
-                    step="0.001"
+                    step="any"
                     min="0"
-                    placeholder="e.g. 0.245 (leave blank if variable)"
+                    placeholder="e.g. 0.245 or 0.2165 (leave blank if variable)"
                     value={unitRate}
                     onChange={(e) => setUnitRate(e.target.value)}
                     className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2"
@@ -304,7 +304,8 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
                   </label>
                   <input
                     type="number"
-                    step="0.01"
+                    step="any"
+                    min="0"
                     required
                     value={standingCharge}
                     onChange={(e) => setStandingCharge(e.target.value)}
@@ -359,6 +360,7 @@ export const TariffModal: React.FC<TariffModalProps> = ({ isOpen, onClose }) => 
           isOpen={!!recurringModalTarget}
           initialMode="recurring"
           initialUtilityType={recurringModalTarget}
+          initialPropertyId={currentProperty?.id}
           onClose={() => setRecurringModalTarget(null)}
         />
       )}

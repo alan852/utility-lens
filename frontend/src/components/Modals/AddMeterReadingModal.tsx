@@ -7,10 +7,15 @@ import { Gauge, X, Zap, Flame, AlertCircle } from 'lucide-react';
 interface AddMeterReadingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialPropertyId?: string;
 }
 
-export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOpen, onClose }) => {
-  const { properties, triggerRefresh } = useApp();
+export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ 
+  isOpen, 
+  onClose,
+  initialPropertyId 
+}) => {
+  const { properties, currentProperty, triggerRefresh } = useApp();
 
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
   const [utilityType, setUtilityType] = useState<UtilityType>('ELECTRICITY');
@@ -22,35 +27,34 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize selected property defaulting to last record
+  // Initialize selected property defaulting to initialPropertyId, currentProperty, or last record
   useEffect(() => {
     if (!isOpen || properties.length === 0) return;
 
-    const initProperty = async () => {
-      let defaultId = localStorage.getItem('last_meter_reading_property_id');
-      if (!defaultId || !properties.some(p => p.id === defaultId)) {
-        try {
-          const recentReadings = await api.getMeterReadings();
-          if (recentReadings.length > 0 && recentReadings[0].property_id && properties.some(p => p.id === recentReadings[0].property_id)) {
-            defaultId = recentReadings[0].property_id;
-          }
-        } catch (e) {
-          // Fallback to last bill property or first property
-        }
-      }
-      if (!defaultId || !properties.some(p => p.id === defaultId)) {
-        const lastBillProp = localStorage.getItem('last_bill_property_id');
-        if (lastBillProp && properties.some(p => p.id === lastBillProp)) {
-          defaultId = lastBillProp;
+    const initProperty = () => {
+      let defaultId = '';
+      if (initialPropertyId && properties.some(p => p.id === initialPropertyId)) {
+        defaultId = initialPropertyId;
+      } else if (currentProperty?.id && properties.some(p => p.id === currentProperty.id)) {
+        defaultId = currentProperty.id;
+      } else {
+        const lastReadProp = localStorage.getItem('last_meter_reading_property_id');
+        if (lastReadProp && properties.some(p => p.id === lastReadProp)) {
+          defaultId = lastReadProp;
         } else {
-          defaultId = properties[0]?.id || '';
+          const lastBillProp = localStorage.getItem('last_bill_property_id');
+          if (lastBillProp && properties.some(p => p.id === lastBillProp)) {
+            defaultId = lastBillProp;
+          } else {
+            defaultId = properties[0]?.id || '';
+          }
         }
       }
       setSelectedPropertyId(defaultId);
     };
 
     initProperty();
-  }, [isOpen, properties]);
+  }, [isOpen, properties, initialPropertyId, currentProperty?.id]);
 
   if (!isOpen) return null;
 
@@ -126,7 +130,7 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
           )}
 
           {/* Property Selection */}
-          {properties.length > 1 && (
+          {properties.length > 0 ? (
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Property *
@@ -142,6 +146,10 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
                   </option>
                 ))}
               </select>
+            </div>
+          ) : (
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
+              No properties found. Please create a property before logging a reading.
             </div>
           )}
 
@@ -222,7 +230,7 @@ export const AddMeterReadingModal: React.FC<AddMeterReadingModalProps> = ({ isOp
             <div className="relative">
               <input
                 type="number"
-                step="0.1"
+                step="any"
                 required
                 placeholder="e.g. 14502.5"
                 value={meterIndex}

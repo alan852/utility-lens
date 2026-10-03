@@ -174,7 +174,7 @@ export const EditMeterReadingModal: React.FC<EditMeterReadingModalProps> = ({
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="any"
                 required
                 value={meterIndex}
                 onChange={(e) => setMeterIndex(e.target.value)}

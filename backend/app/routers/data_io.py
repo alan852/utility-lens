@@ -198,7 +198,7 @@ def commit_csv(
             if raw_cost == 0.0:
                 tariff = crud.get_active_tariff(db, req.property_id, util, parsed_start)
                 if tariff:
-                    days = max(1, (parsed_end - parsed_start).days)
+                    days = max(1, (parsed_end - parsed_start).days + 1)
                     vat_mult = 1.0 + tariff.vat_rate
                     calc_sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
                     standing_charge_cost = calc_sc_cost
@@ -212,7 +212,7 @@ def commit_csv(
                 else:
                     tariff = crud.get_active_tariff(db, req.property_id, util, parsed_start)
                     if tariff and tariff.standing_charge > 0:
-                        days = max(1, (parsed_end - parsed_start).days)
+                        days = max(1, (parsed_end - parsed_start).days + 1)
                         vat_mult = 1.0 + tariff.vat_rate
                         calc_sc_cost = round(days * tariff.standing_charge * vat_mult, 2)
                         if raw_cost >= calc_sc_cost:

@@ -433,7 +433,7 @@ def simulate_tariffs(db: Session, request: schemas.TariffSimulationRequest) -> s
             "period_end": b.period_end,
             "total_units": b.total_units,
             "total_cost": b.total_cost,
-            "days": max(1, (b.period_end - b.period_start).days)
+            "days": max(1, (b.period_end - b.period_start).days + 1)
         })
     df = pd.DataFrame(records)
     df["period_start"] = pd.to_datetime(df["period_start"])

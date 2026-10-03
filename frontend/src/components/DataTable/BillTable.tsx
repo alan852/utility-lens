@@ -7,7 +7,7 @@ import { EditBillModal } from '../Modals/EditBillModal';
 import { AddBillModal } from '../Modals/AddBillModal';
 
 export const BillTable: React.FC = () => {
-  const { properties, selectedPropertyIds, isAllPropertiesSelected, refreshKey, triggerRefresh } = useApp();
+  const { properties, currentProperty, selectedPropertyIds, isAllPropertiesSelected, refreshKey, triggerRefresh } = useApp();
   const [bills, setBills] = useState<BillRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [filterUtil, setFilterUtil] = useState<string>('');
@@ -125,7 +125,7 @@ export const BillTable: React.FC = () => {
                 const isCouncilTax = b.utility_type === 'COUNCIL_TAX';
                 const isBroadband = b.utility_type === 'BROADBAND';
                 const isServiceCharge = b.utility_type === 'ESTATE_SERVICE_CHARGE';
-                const days = Math.max(1, Math.round((new Date(b.period_end).getTime() - new Date(b.period_start).getTime()) / (1000 * 3600 * 24)));
+                const days = Math.max(1, Math.round((new Date(b.period_end).getTime() - new Date(b.period_start).getTime()) / (1000 * 3600 * 24)) + 1);
                 const dailyCost = (b.total_cost / days).toFixed(2);
 
                 const hasStanding = b.standing_charge_cost != null;
@@ -282,6 +282,7 @@ export const BillTable: React.FC = () => {
       <AddBillModal
         isOpen={isRecurringModalOpen}
         initialMode="recurring"
+        initialPropertyId={currentProperty?.id}
         onClose={() => setIsRecurringModalOpen(false)}
       />
     </div>

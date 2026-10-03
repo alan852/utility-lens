@@ -37,7 +37,7 @@ def create_bill(bill_in: schemas.BillRecordCreate, db: Session = Depends(get_db)
     if util == "GAS" and data.get("raw_unit_type") == "M3" and data.get("raw_meter_units"):
         data["total_units"] = convert_gas_m3_to_kwh(data["raw_meter_units"])
 
-    days = max(1, (data["period_end"] - data["period_start"]).days)
+    days = max(1, (data["period_end"] - data["period_start"]).days + 1)
     sc = data.get("standing_charge_cost")
     ur = data.get("unit_rate_cost")
     tot = data.get("total_cost")

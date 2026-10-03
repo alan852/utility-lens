@@ -133,11 +133,13 @@ export const App: React.FC = () => {
       {/* Modals */}
       <AddBillModal
         isOpen={isAddBillOpen}
+        initialPropertyId={currentProperty?.id}
         onClose={() => setIsAddBillOpen(false)}
       />
 
       <AddMeterReadingModal
         isOpen={isAddReadingOpen}
+        initialPropertyId={currentProperty?.id}
         onClose={() => setIsAddReadingOpen(false)}
       />
 

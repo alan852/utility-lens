@@ -227,7 +227,7 @@ $$\text{kWh} = \text{volume}(m^3) \times \text{Volume Correction (1.02264)} \tim
 - Analytics (`analytics.py`) always operates on standardized `total_units` (kWh for Electricity and Gas, $m^3$ for Water).
 
 ### 2. Standing Charge & Unit Rate Cost Reconciliation
-For any bill spanning $N = \max(1, \text{period\_end} - \text{period\_start})$ days:
+For any bill spanning $N = \max(1, (\text{period\_end} - \text{period\_start}) + 1)$ days (inclusive):
 - $\text{Total Cost} = \text{Standing Charge Cost} + \text{Unit Rate Cost}$
 - **Reconciliation Rules (`bills.py`, `data_io.py`)**:
   - If `standing_charge_cost` and `unit_rate_cost` are provided and `total_cost` is 0 or omitted:
